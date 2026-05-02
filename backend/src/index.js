@@ -179,7 +179,7 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
 
         const results = computeEligibility(profileForEligibility);
         const eligibleSchemes = results
-          .filter((r) => r.status === "eligible")
+          .filter((r) => r.status === "eligible" || r.status === "needs_documents")
           .map((r) => r.scheme?.name)
           .filter(Boolean);
 

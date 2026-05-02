@@ -40,6 +40,16 @@
       "deadline": "2026-12-15",
       "benefit": "₹50,000 Special Award for Distinction Students",
       "required_documents": ["aadhaar", "income_certificate", "marks_card", "bank_passbook"]
+    },
+    {
+      "id": "KA-STATE-EXCELLENCE-2026",
+      "name": "Karnataka State Excellence Award for Distinction Students",
+      "state": "Karnataka",
+      "income_limit": 800000,
+      "min_marks": 90,
+      "deadline": "2026-12-31",
+      "benefit": "₹1,00,000 One-time Excellence Grant",
+      "required_documents": ["aadhaar", "income_certificate", "marks_card", "bank_passbook"]
     }
   ]
 }
