@@ -5,6 +5,7 @@ const fs = require("fs");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const twilio = require("twilio");
 
 require("dotenv").config();
 
@@ -25,6 +26,11 @@ const PORT = process.env.PORT || 3002;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash-latest";
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+
+const twilioClient = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
+const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID || "";
 const UPLOAD_DIR = path.resolve(__dirname, "..", "uploads");
 const LOCKER_PATH = path.resolve(__dirname, "..", "data", "locker.json");
 const HISTORY_PATH = path.resolve(__dirname, "..", "data", "history.json");
@@ -98,10 +104,52 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/api/auth/login", (req, res) => {
-  const sessionId = uuidv4();
-  lockerUpsert(sessionId, { phone: (req.body?.phone || "").toString(), language: "en" });
-  res.json({ sessionId });
+app.post("/api/auth/send-otp", async (req, res) => {
+  const phone = (req.body?.phone || "").toString().trim();
+  if (!phone) return res.status(400).json({ error: "Missing phone number" });
+
+  if (twilioClient && verifyServiceSid) {
+    try {
+      const verification = await twilioClient.verify.v2.services(verifyServiceSid)
+        .verifications.create({ to: phone, channel: "sms" });
+      res.json({ ok: true, status: verification.status });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  } else {
+    console.log(`[AUTH] Mock send-otp to ${phone}. Use 123456 to verify.`);
+    res.json({ ok: true, mocked: true });
+  }
+});
+
+app.post("/api/auth/verify-otp", async (req, res) => {
+  const { phone, code } = req.body;
+  if (!phone || !code) return res.status(400).json({ error: "Missing phone or code" });
+
+  if (twilioClient && verifyServiceSid) {
+    try {
+      const check = await twilioClient.verify.v2.services(verifyServiceSid)
+        .verificationChecks.create({ to: phone, code });
+      if (check.status === "approved") {
+        const sessionId = uuidv4();
+        lockerUpsert(sessionId, { phone, language: "en" });
+        res.json({ ok: true, sessionId });
+      } else {
+        res.status(400).json({ error: "Invalid OTP" });
+      }
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  } else {
+    // Mock verification
+    if (code === "123456") {
+      const sessionId = uuidv4();
+      lockerUpsert(sessionId, { phone, language: "en" });
+      res.json({ ok: true, sessionId });
+    } else {
+      res.status(400).json({ error: "Invalid mock OTP. Use 123456." });
+    }
+  }
 });
 
 app.post("/api/language", (req, res) => {
@@ -141,8 +189,8 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
       ocr = await runOcr(filePath, "eng");
     }
 
-    const docTypeDetected = classifyDocument(ocr.text);
-    const issueDate = extractIssueDate(ocr.text);
+    let docTypeDetected = classifyDocument(ocr.text);
+    let issueDate = extractIssueDate(ocr.text);
     const profileFields = extractProfileFields(ocr.text);
 
     const extracted = {
@@ -152,6 +200,10 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
       marks: profileFields.marks.value,
       accountNumber: profileFields.accountNumber.value,
       ifsc: profileFields.ifsc.value,
+      aadhaar: profileFields.aadhaar.value,
+      gender: profileFields.gender.value,
+      state: profileFields.state.value,
+      pincode: profileFields.pincode.value,
     };
 
     const confidence = {
@@ -161,6 +213,10 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
       marks: profileFields.marks.confidence,
       accountNumber: profileFields.accountNumber.confidence,
       ifsc: profileFields.ifsc.confidence,
+      aadhaar: profileFields.aadhaar.confidence,
+      gender: profileFields.gender.confidence,
+      state: profileFields.state.confidence,
+      pincode: profileFields.pincode.confidence,
     };
 
     // expiry detection: default 365 days for certificates (income)
@@ -206,11 +262,12 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
           .filter(Boolean);
 
         if (eligibleSchemes.length > 0) {
+          /* SMS DISABLED FOR TESTING
           await sendEligibilitySMS({
             to: phone,
             scholarshipNames: eligibleSchemes.slice(0, 2),
           });
-
+          */
           lockerUpsert(sessionId, { smsFlags: { ...(locker.smsFlags || {}), eligibilitySent: true } });
         }
       }
@@ -497,3 +554,4 @@ const http = require("http");
 http.createServer(app).listen(PORT, () => {
   console.log(`SAHAYAK AI backend listening on http://localhost:${PORT}`);
 });
+// Nodemon trigger

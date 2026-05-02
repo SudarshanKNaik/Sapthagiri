@@ -22,6 +22,7 @@ import NextStepRecommendationBanner from "./components/NextStepRecommendationBan
 import CaptchaAssistScreen from "./components/CaptchaAssistScreen";
 import SubmissionSuccessScreen from "./components/SubmissionSuccessScreen";
 import ApplicationHistoryPanel from "./components/ApplicationHistoryPanel";
+import LandingPage from "./components/LandingPage";
 
 import AgentExecutionTimeline from "./components/AgentExecutionTimeline";
 import PromptInputArea from "./components/PromptInputArea";
@@ -43,6 +44,63 @@ function computeNextBestAction({ locker, eligibilityResults, formReadiness }) {
   if (typeof formReadiness === "number" && formReadiness < 80) return "Complete remaining fields";
 
   return "";
+}
+
+function ExternalApplyPopup({ activeScheme, profile }) {
+  const [ngrokUrl, setNgrokUrl] = React.useState(localStorage.getItem('sahayak_ngrok_url') || 'https://reunite-obstacle-enzyme.ngrok-free.dev');
+  const [popup, setPopup] = React.useState(null);
+
+  const openPopup = () => {
+    const base = ngrokUrl.replace(/\/$/, '');
+    localStorage.setItem('sahayak_ngrok_url', base);
+    const p = window.open(`${base}/login`, 'SahayakApply', 'width=1100,height=800,menubar=no,toolbar=no,scrollbars=yes');
+    setPopup(p);
+  };
+
+  React.useEffect(() => {
+    let interval;
+    if (popup && profile) {
+      // Send data periodically to ensure the popup receives it after loading
+      interval = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(interval);
+          setPopup(null);
+        } else {
+          try {
+            popup.postMessage({
+              type: 'AUTOFILL_DATA',
+              payload: {
+                ...profile,
+                annual_income: profile.income,
+                date_of_birth: profile.dob
+              }
+            }, '*');
+          } catch(e) {}
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [popup, profile]);
+
+  return (
+    <div className="w-full border border-slate-200 rounded-xl p-6 shadow-sm bg-slate-50 flex flex-col items-center justify-center space-y-5">
+      <div className="text-center space-y-2">
+        <h3 className="text-lg font-bold text-slate-800">Launch External Application</h3>
+        <p className="text-sm text-slate-500">Enter your Ngrok URL to open the {activeScheme?.name} form in a popup. We will autofill your details securely.</p>
+      </div>
+      <input 
+        type="text" 
+        value={ngrokUrl} 
+        onChange={e => setNgrokUrl(e.target.value)} 
+        className="w-full max-w-md p-3 border border-slate-300 rounded-lg text-sm text-center"
+        placeholder="https://your-url.ngrok-free.app"
+      />
+      <button onClick={openPopup} className="btn-primary px-8 py-3 w-full max-w-md text-base shadow-md font-medium">
+        Launch Application Popup
+      </button>
+      {popup && !popup.closed && <p className="text-xs text-green-600 font-semibold animate-pulse">Popup is running and syncing data...</p>}
+    </div>
+  );
 }
 
 export default function App() {
@@ -204,21 +262,9 @@ export default function App() {
     }
   }
 
-  async function doLogin() {
-    setError("");
-    setBusy(true);
-    try {
-      const res = await apiFetch("/api/auth/login", {
-        method: "POST",
-        body: { phone },
-      });
-      setSessionId(res.sessionId);
-      setView("language");
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
+  function handleLoginSuccess(sid) {
+    setSessionId(sid);
+    setView("language");
   }
 
   async function saveLanguage(lang) {
@@ -400,6 +446,18 @@ export default function App() {
   const documents = useMemo(() => locker?.documents || {}, [locker]);
   const hasPendingUpload = !!locker?.documentsPending?.pending;
 
+  if (view === "login") {
+    return (
+      <LandingPage
+        phone={phone}
+        setPhone={setPhone}
+        onLoginSuccess={handleLoginSuccess}
+        language={language}
+        saveLanguage={saveLanguage}
+      />
+    );
+  }
+
   return (
     <div className="app-window grid grid-cols-1 md:grid-cols-12 grid-rows-[1fr_auto]">
       {/* Left Panel */}
@@ -489,33 +547,7 @@ export default function App() {
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-900 shadow-sm">{error}</div>
         )}
 
-        <div className={`flex-1 w-full max-w-3xl mx-auto pb-20 ${view === "login" || view === "language" ? "flex flex-col items-center justify-center" : "space-y-6"}`}>
-          
-          {view === "login" && (
-            <div className="flex flex-col items-center justify-center text-center space-y-6 -mt-24">
-              <div>
-                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">How can I help you today?</h1>
-                <p className="text-slate-500 mt-2 max-w-sm mx-auto">Enter your phone number to login and start matching with scholarships automatically.</p>
-              </div>
-              
-              <div className="w-full max-w-sm space-y-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-center text-lg font-semibold text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
-                  inputMode="tel"
-                  placeholder="Enter Mobile Number"
-                />
-                <button
-                  onClick={doLogin}
-                  disabled={busy || !phone}
-                  className="btn-primary w-full py-3.5 text-base shadow-lg shadow-[#4d7c0f]/20 disabled:opacity-50"
-                >
-                  {busy ? "Connecting..." : "Start Session"}
-                </button>
-              </div>
-            </div>
-          )}
+        <div className={`flex-1 w-full max-w-3xl mx-auto pb-20 ${view === "language" ? "flex flex-col items-center justify-center" : "space-y-6"}`}>
 
           {view === "language" && (
             <div className="flex flex-col items-center justify-center text-center space-y-6 -mt-24">
@@ -561,6 +593,20 @@ export default function App() {
                      I successfully extracted {Object.keys(lastOcr.extracted||{}).length} fields from your {lastOcr.docTypeDetected}. See the right panel for my confidence breakdown.
                    </div>
                  </div>
+              )}
+
+              {locker?.profile && Object.keys(locker.profile).length > 0 && (
+                <div className="pl-14 animate-in fade-in slide-in-from-bottom-2">
+                  <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Your Extracted Details</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {Object.entries(locker.profile).filter(([k]) => k !== 'documents').map(([key, val]) => (
+                      <div key={key} className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-[var(--border-dark)] transition-colors">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-1">{key.replace(/_/g, " ")}</div>
+                        <div className="text-sm font-bold text-slate-900 truncate">{String(val)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               <div className="pl-14 pt-4 flex gap-3">
@@ -644,13 +690,7 @@ export default function App() {
               </div>
               <div className="pl-14 space-y-4">
                 <DocumentSuggestionPanel requiredDocuments={activeScheme?.required_documents || []} availableDocs={documents} onGoUpload={() => setView("upload")} />
-                <AutofillFormWizard
-                  sessionId={sessionId}
-                  language={language}
-                  initialProfile={locker?.profile}
-                  confidenceMap={locker?.verification}
-                  onSubmit={() => setView("captcha")}
-                />
+                <ExternalApplyPopup activeScheme={activeScheme} profile={locker?.profile} />
               </div>
             </div>
           )}
@@ -668,7 +708,7 @@ export default function App() {
 
       {/* Right Panel */}
       <div className="hidden lg:flex lg:flex-col lg:col-span-3 border-l border-slate-200 bg-white p-5 overflow-y-auto">
-        <ReasoningPanel activeScheme={activeScheme} confidenceMap={locker?.verification} lastOcr={lastOcr} />
+        <ReasoningPanel activeScheme={activeScheme} confidenceMap={locker?.verification} lastOcr={lastOcr} profile={locker?.profile} />
       </div>
 
       {/* Bottom Panel */}
