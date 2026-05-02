@@ -38,8 +38,13 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const app = express();
+app.use((req, res, next) => {
+  console.log(`[API] ${req.method} ${req.url}`);
+  next();
+});
 app.use(cors({ origin: true }));
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 function getSessionId(req) {
   return req.headers["x-session-id"] || req.body?.sessionId || req.query?.sessionId || "";
@@ -59,7 +64,7 @@ function lockerUpsert(sessionId, patch) {
     ...patch,
     profile: {
       ...(old.profile || {}),
-      ...(patch.profile || {}),
+      ...Object.fromEntries(Object.entries(patch.profile || {}).filter(([_, v]) => v !== "" && v !== null)),
     },
     verification: {
       ...(old.verification || {}),
@@ -102,9 +107,18 @@ app.post("/api/language", (req, res) => {
 });
 
 app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
+  console.log("[UPLOAD] Received file upload request");
   const sessionId = getSessionId(req);
-  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
-  if (!req.file?.path) return res.status(400).json({ error: "Missing file" });
+  if (!sessionId) {
+    console.error("[UPLOAD] Error: Missing sessionId");
+    return res.status(400).json({ error: "Missing sessionId" });
+  }
+  if (!req.file?.path) {
+    console.error("[UPLOAD] Error: Missing file");
+    return res.status(400).json({ error: "Missing file" });
+  }
+
+  console.log(`[UPLOAD] Processing for session: ${sessionId}, file: ${req.file.path}`);
 
   const reuse = String(req.body?.reuse || "false") === "true";
   const preferredLang = (req.body?.ocrLang || "eng").toString();
@@ -114,8 +128,10 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
   let ocr;
   try {
     try {
+      console.log(`[OCR] Request initiated for session ${sessionId}`);
       ocr = await runOcr(filePath, preferredLang);
     } catch (e) {
+      console.warn(`[OCR] Primary failed, retrying with eng. Error: ${e.message}`);
       ocr = await runOcr(filePath, "eng");
     }
 
@@ -197,12 +213,14 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
     }
 
     res.json({
-      docTypeDetected,
-      ocrConfidence: ocr.confidence,
+      message: "Successfully extracted fields",
       extracted,
+      docTypeDetected,
       confidence,
-      expiry,
-      locker,
+      profile: {
+        ...(locker.profile || {}),
+        documents: locker.documents || {},
+      },
     });
   } catch (e) {
     res.status(500).json({ error: "OCR failed", details: String(e?.message || e) });
@@ -222,6 +240,15 @@ app.get("/api/locker", (req, res) => {
   if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
   const db = readJson(LOCKER_PATH, { users: {} });
   res.json({ locker: db.users[sessionId] || null });
+});
+
+app.get("/api/profile", (req, res) => {
+  const sessionId = getSessionId(req);
+  const locker = lockerRead(sessionId);
+  res.json({
+    ...(locker.profile || {}),
+    documents: locker.documents || {},
+  });
 });
 
 app.post("/api/locker/upsert", (req, res) => {

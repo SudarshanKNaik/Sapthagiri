@@ -42,11 +42,11 @@ export default function ReasoningPanel({ activeScheme, confidenceMap, lastOcr })
           <ul className="space-y-2 text-xs text-slate-600">
             <li className="flex justify-between">
               <span>Income Limit:</span>
-              <span className="font-semibold text-slate-900">₹{activeScheme.rules?.income_limit}</span>
+              <span className="font-semibold text-slate-900">₹{activeScheme.income_limit}</span>
             </li>
             <li className="flex justify-between">
               <span>Min Marks:</span>
-              <span className="font-semibold text-slate-900">{activeScheme.rules?.min_marks}%</span>
+              <span className="font-semibold text-slate-900">{activeScheme.min_marks}%</span>
             </li>
           </ul>
         </div>

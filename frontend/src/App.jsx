@@ -118,7 +118,15 @@ export default function App() {
               body: fd,
             });
             setLastOcr(res);
-            setLocker(res.locker);
+            if (res.profile) {
+              setLocker((prev) => ({
+                ...(prev || {}),
+                profile: { ...((prev && prev.profile) || {}), ...(res.profile || {}) },
+                documents: { ...((prev && prev.documents) || {}), ...(res.profile.documents || {}) },
+              }));
+            } else if (res.locker) {
+              setLocker(res.locker);
+            }
             await removeQueuedUpload(u.id);
           } catch {
             // keep in queue
@@ -259,7 +267,17 @@ export default function App() {
       }
       
       setLastOcr(res);
-      setLocker(res.locker);
+      // Merge the returned profile (which includes documents) into local locker state
+      if (res.profile) {
+        setLocker((prev) => ({
+          ...(prev || {}),
+          profile: { ...((prev && prev.profile) || {}), ...(res.profile || {}) },
+          documents: { ...((prev && prev.documents) || {}), ...(res.profile.documents || {}) },
+          verification: { ...((prev && prev.verification) || {}), ...(res.confidence || {}) },
+        }));
+      } else if (res.locker) {
+        setLocker(res.locker);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -347,107 +365,122 @@ export default function App() {
     }
   }
 
-  const documents = locker?.documents || {};
+  const documents = useMemo(() => locker?.documents || {}, [locker]);
   const hasPendingUpload = !!locker?.documentsPending?.pending;
 
   return (
-    <div className="h-screen w-screen grid grid-cols-1 md:grid-cols-12 grid-rows-[1fr_auto] bg-ai-canvas text-slate-900 overflow-hidden font-sans">
+    <div className="h-screen w-screen grid grid-cols-1 md:grid-cols-12 grid-rows-[1fr_auto] bg-slate-50 text-slate-900 overflow-hidden font-sans">
       {/* Left Panel */}
-      <div className="hidden md:block md:col-span-3 lg:col-span-2 border-r border-slate-200 bg-ai-surface p-4 overflow-y-auto">
+      <div className="hidden md:flex md:flex-col md:col-span-3 lg:col-span-2 border-r border-slate-200 bg-white p-5 overflow-y-auto">
         <div className="mb-8">
-          <div className="text-xl font-extrabold text-ai-primary">{t(language, "appName")}</div>
-          <div className="text-xs font-semibold text-slate-500 mt-1">{t(language, "tagline")}</div>
+          <div className="text-2xl font-extrabold text-indigo-600 tracking-tight">{t(language, "appName")}</div>
+          <div className="text-sm font-medium text-slate-500 mt-1">{t(language, "tagline")}</div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-8 flex-1">
           <div>
-            <h3 className="mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Settings</h3>
-            {!online && <div className="mb-2 rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-900 w-max">OFFLINE MODE</div>}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 w-max">PRIVACY ON</div>
+            <h3 className="mb-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Settings</h3>
+            {!online && <div className="mb-3 rounded-md bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 w-max">OFFLINE MODE</div>}
+            
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> PRIVACY ON
+              </span>
               <button 
                 onClick={() => {
                   localStorage.clear();
                   window.location.reload();
                 }}
-                className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 transition-colors"
+                className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 transition-colors"
               >
-                Logout / Start Over
+                Logout / Reset
               </button>
             </div>
+            
             <select 
               value={language} 
               onChange={(e) => saveLanguage(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 transition-all cursor-pointer"
             >
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
             </select>
           </div>
 
           <div>
-            <h3 className="mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Document Locker</h3>
-            <div className="space-y-1 text-sm text-slate-700">
-              <div className="flex items-center justify-between">
-                <span>Aadhaar</span>
-                <span>{documents.aadhaar ? "✅" : "❌"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Income Cert</span>
-                <span>{documents.income_certificate ? "✅" : "❌"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Marks Card</span>
-                <span>{documents.marks_card ? "✅" : "❌"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Bank Passbook</span>
-                <span>{documents.bank_passbook ? "✅" : "❌"}</span>
-              </div>
+            <h3 className="mb-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Document Locker</h3>
+            <div className="space-y-2.5 text-sm font-medium text-slate-700">
+              {[
+                { key: "aadhaar", label: "Aadhaar" },
+                { key: "income_certificate", label: "Income Certificate" },
+                { key: "marks_card", label: "Marks Card" },
+                { key: "bank_passbook", label: "Bank Passbook" },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
+                  <span>{label}</span>
+                  {documents[key] ? (
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 text-xs">✓</span>
+                  ) : (
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-rose-100 text-rose-600 text-xs">✕</span>
+                  )}
+                </div>
+              ))}
             </div>
-            <label className="mt-4 flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={!!reuse} onChange={(e) => setReuse(e.target.checked)} className="h-4 w-4" />
-              <span className="text-xs font-semibold text-slate-600">{t(language, "reuseLabel")}</span>
+            <label className="mt-5 flex items-start gap-3 cursor-pointer group">
+              <div className="relative flex items-center justify-center mt-0.5">
+                <input type="checkbox" checked={!!reuse} onChange={(e) => setReuse(e.target.checked)} className="peer h-4 w-4 cursor-pointer appearance-none rounded border-2 border-slate-300 checked:border-indigo-600 checked:bg-indigo-600 transition-all" />
+                <span className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none text-[10px]">✓</span>
+              </div>
+              <span className="text-xs font-medium text-slate-600 group-hover:text-slate-900 transition-colors leading-relaxed">{t(language, "reuseLabel")}</span>
             </label>
           </div>
-          
-          <button onClick={async () => { await loadHistory(); setView("history"); }} className="w-full text-left text-sm font-bold text-slate-700 hover:text-ai-primary">
-            View Application History
+        </div>
+        
+        <div className="pt-6 mt-auto border-t border-slate-100">
+          <button onClick={async () => { await loadHistory(); setView("history"); }} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 transition-colors shadow-sm flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+            View History
           </button>
         </div>
       </div>
 
       {/* Center Panel */}
       <div className="col-span-1 md:col-span-6 lg:col-span-7 flex flex-col p-4 md:p-8 overflow-y-auto relative bg-white border-x border-slate-100 shadow-[inset_0_0_20px_rgba(0,0,0,0.02)]">
-        <AgentExecutionTimeline activeStage={busy ? "processing" : "completed"} />
+        
+        {view !== "login" && view !== "language" && (
+          <>
+            <AgentExecutionTimeline activeStage={busy ? "processing" : "completed"} />
+            <NextStepRecommendationBanner nextAction={nextAction} />
+          </>
+        )}
 
         {error && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-900 shadow-sm">{error}</div>
         )}
 
-        <NextStepRecommendationBanner nextAction={nextAction} />
-
-        <div className="flex-1 space-y-6 max-w-3xl mx-auto w-full pb-20">
+        <div className={`flex-1 w-full max-w-3xl mx-auto pb-20 ${view === "login" || view === "language" ? "flex flex-col items-center justify-center" : "space-y-6"}`}>
           
           {view === "login" && (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-6 pt-10">
-              <div className="h-16 w-16 bg-ai-secondary rounded-2xl flex items-center justify-center shadow-lg shadow-ai-secondary/20">
+            <div className="flex flex-col items-center justify-center text-center space-y-6 -mt-24">
+              <div className="h-16 w-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
                 <span className="text-2xl text-white">✨</span>
               </div>
-              <h1 className="text-3xl font-bold text-slate-900">How can I help you today?</h1>
-              <p className="text-slate-500 max-w-md">Enter your phone number to login and start matching with scholarships automatically.</p>
+              <div>
+                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">How can I help you today?</h1>
+                <p className="text-slate-500 mt-2 max-w-sm mx-auto">Enter your phone number to login and start matching with scholarships automatically.</p>
+              </div>
               
-              <div className="w-full max-w-sm space-y-3">
+              <div className="w-full max-w-sm space-y-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full rounded-2xl border-2 border-slate-200 px-4 py-4 text-center text-lg font-semibold focus:border-ai-primary outline-none transition-colors"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-center text-lg font-semibold text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
                   inputMode="tel"
                   placeholder="Enter Mobile Number"
                 />
                 <button
                   onClick={doLogin}
                   disabled={busy || !phone}
-                  className="w-full rounded-2xl bg-ai-primary px-4 py-4 text-base font-bold text-white hover:bg-opacity-90 disabled:opacity-50 transition-all shadow-md shadow-ai-primary/20"
+                  className="w-full rounded-xl bg-indigo-600 px-4 py-3.5 text-base font-bold text-white hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-[0_4px_14px_rgba(79,70,229,0.3)]"
                 >
                   {busy ? "Connecting..." : "Start Session"}
                 </button>
@@ -456,13 +489,13 @@ export default function App() {
           )}
 
           {view === "language" && (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-6 pt-10">
-              <h1 className="text-3xl font-bold text-slate-900">{t(language, "languageTitle")}</h1>
-              <div className="w-full max-w-sm grid grid-cols-1 gap-3">
+            <div className="flex flex-col items-center justify-center text-center space-y-6 -mt-24">
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{t(language, "languageTitle")}</h1>
+              <div className="w-full max-w-sm grid grid-cols-1 gap-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 {LANGS.map((l) => (
                   <button
                     key={l.code}
-                    className={`rounded-2xl border-2 px-4 py-4 text-center text-lg font-bold transition-all ${language === l.code ? "border-ai-primary bg-ai-primary text-white shadow-md shadow-ai-primary/20" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"}`}
+                    className={`rounded-xl border-2 px-4 py-4 text-center text-base font-bold transition-all ${language === l.code ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}
                     onClick={async () => {
                       await saveLanguage(l.code);
                       setView("upload");
@@ -495,7 +528,7 @@ export default function App() {
 
               {lastOcr && (
                  <div className="pl-14 animate-in fade-in slide-in-from-bottom-2">
-                   <div className="rounded-2xl border-2 border-ai-secondary/20 bg-ai-secondary/5 p-4 text-sm text-ai-secondary font-medium">
+                   <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800 font-medium">
                      I successfully extracted {Object.keys(lastOcr.extracted||{}).length} fields from your {lastOcr.docTypeDetected}. See the right panel for my confidence breakdown.
                    </div>
                  </div>
@@ -504,14 +537,14 @@ export default function App() {
               <div className="pl-14 pt-4 flex gap-3">
                 <button
                   onClick={refreshLocker}
-                  className="rounded-xl border-2 border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                  className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
                 >
                   Refresh
                 </button>
                 <button
                   onClick={loadEligibility}
                   disabled={busy}
-                  className="rounded-xl bg-ai-primary px-6 py-3 text-sm font-bold text-white shadow-md shadow-ai-primary/20 hover:bg-opacity-90 transition-all disabled:opacity-50"
+                  className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:bg-indigo-700 transition-all disabled:opacity-50"
                 >
                   {busy ? "Thinking..." : "Check Eligibility Matches"}
                 </button>
@@ -605,7 +638,7 @@ export default function App() {
       </div>
 
       {/* Right Panel */}
-      <div className="hidden lg:block lg:col-span-3 border-l border-slate-200 bg-ai-surface p-4 overflow-y-auto">
+      <div className="hidden lg:block lg:col-span-3 border-l border-slate-200 bg-slate-50 p-5 overflow-y-auto">
         <ReasoningPanel activeScheme={activeScheme} confidenceMap={locker?.verification} lastOcr={lastOcr} />
       </div>
 
