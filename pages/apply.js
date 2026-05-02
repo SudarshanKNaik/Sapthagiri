@@ -7,25 +7,23 @@ const formFields = {
     title: 'Personal Details',
     fields: [
       { id: 'full_name', label: 'Full Name', type: 'text', required: true, autofillKey: 'name' },
-      { id: 'dob', label: 'Date of Birth', type: 'date', required: true, autofillKey: 'dob' },
+      { id: 'dob', label: 'DOB', type: 'text', required: true, autofillKey: 'dob' },
       { id: 'aadhaar', label: 'Aadhaar Number', type: 'text', required: true, autofillKey: 'aadhaar' },
-      { id: 'gender', label: 'Gender', type: 'select', required: true, options: ['Male', 'Female', 'Other'] }
+      { id: 'gender', label: 'Gender', type: 'text', required: true, autofillKey: 'gender' }
     ]
   },
   step2: {
     title: 'Address Details',
     fields: [
-      { id: 'address', label: 'Street Address', type: 'textarea', required: true, autofillKey: 'address' },
-      { id: 'state', label: 'State', type: 'text', required: true },
-      { id: 'district', label: 'District', type: 'text', required: true },
-      { id: 'pincode', label: 'Pincode', type: 'text', required: true }
+      { id: 'state', label: 'State', type: 'text', required: true, autofillKey: 'state' },
+      { id: 'pincode', label: 'Pincode', type: 'text', required: true, autofillKey: 'pincode' }
     ]
   },
   step3: {
     title: 'Financial Details',
     fields: [
-      { id: 'income', label: 'Annual Income (₹)', type: 'number', required: true, autofillKey: 'income' },
-      { id: 'bank_account', label: 'Bank Account Number', type: 'text', required: true, autofillKey: 'bank_account' },
+      { id: 'income', label: 'Annual Income (₹)', type: 'text', required: true, autofillKey: 'income' },
+      { id: 'bank_account', label: 'Bank Account Number', type: 'text', required: true, autofillKey: 'accountNumber' },
       { id: 'ifsc', label: 'IFSC Code', type: 'text', required: true, autofillKey: 'ifsc' }
     ]
   }
@@ -35,32 +33,158 @@ export default function Apply() {
   const router = useRouter()
   const { schemeId } = router.query
   const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState({})
+  const [formData, setFormData] = useState({ state: 'Karnataka' })
   const [uploadedFiles, setUploadedFiles] = useState({})
   const [missingFields, setMissingFields] = useState({})
-  const [autofilledFields, setAutofilledFields] = useState(new Set())
+  const [autofilledFields, setAutofilledFields] = useState(new Set(['state']))
 
   // Autofill logic on component mount
   useEffect(() => {
+    // 1. Initial check (if injected directly)
     if (typeof window !== 'undefined' && window.userData) {
-      const userData = window.userData
-      const newFormData = { ...formData }
-      const newAutofilledFields = new Set()
-
-      // Auto-fill all steps
-      Object.keys(formFields).forEach(stepKey => {
-        formFields[stepKey].fields.forEach(field => {
-          if (field.autofillKey && userData[field.autofillKey]) {
-            newFormData[field.id] = userData[field.autofillKey]
-            newAutofilledFields.add(field.id)
-          }
-        })
-      })
-
-      setFormData(newFormData)
-      setAutofilledFields(newAutofilledFields)
+      applyUserData(window.userData)
     }
+
+    // 2. Listen for postMessage from parent iframe
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'AUTOFILL_DATA') {
+        applyUserData(event.data.payload)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+    
+    // 3. Notify parent that iframe is ready to receive data
+    if (window.parent) {
+      window.parent.postMessage({ type: 'IFRAME_READY' }, '*')
+    }
+
+    return () => window.removeEventListener('message', handleMessage)
   }, [])
+
+  // Initialize Voice Assistant
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (document.getElementById('sahayak-voice-assist')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'sahayak-voice-assist';
+    btn.title = 'Sahayak Voice Assistant';
+    btn.style.position = 'fixed';
+    btn.style.left = '16px';
+    btn.style.bottom = '16px';
+    btn.style.zIndex = '2147483647';
+    btn.style.width = '56px';
+    btn.style.height = '56px';
+    btn.style.borderRadius = '28px';
+    btn.style.background = '#0ea5a4';
+    btn.style.color = 'white';
+    btn.style.border = 'none';
+    btn.style.cursor = 'pointer';
+    btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    btn.style.display = 'flex';
+    btn.style.alignItems = 'center';
+    btn.style.justifyContent = 'center';
+    btn.style.fontSize = '24px';
+    btn.textContent = '🎤';
+    document.body.appendChild(btn);
+
+    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Speech) {
+      btn.title = 'SpeechRecognition not supported';
+      return;
+    }
+
+    const recog = new Speech();
+    recog.lang = 'en-IN';
+    recog.interimResults = false;
+    recog.maxAlternatives = 1;
+
+    let listening = false;
+    btn.addEventListener('click', () => {
+      if (!listening) { 
+        recog.start(); 
+        listening = true; 
+        btn.style.background = '#059669'; 
+      } else { 
+        recog.stop(); 
+        listening = false; 
+        btn.style.background = '#0ea5a4'; 
+      }
+    });
+
+    recog.addEventListener('result', (ev) => {
+      const text = (ev.results && ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || '';
+      console.log('sahayak: voice heard', text);
+      const t = String(text).trim().toLowerCase();
+      
+      // Voice Commands Logic
+      if (t.includes('fill')) {
+        const m = t.match(/fill\s+(.+?)\s+(?:with\s+)?(.+)/i);
+        if (m) {
+           const field = m[1].trim();
+           const val = m[2].trim();
+           const inputs = Array.from(document.querySelectorAll('input, select'));
+           const target = inputs.find(i => 
+             i.id.toLowerCase().includes(field) || 
+             (i.labels && i.labels[0] && i.labels[0].innerText.toLowerCase().includes(field))
+           );
+           if (target) {
+              target.focus();
+              target.value = val;
+              target.dispatchEvent(new Event('input', { bubbles: true }));
+              target.dispatchEvent(new Event('change', { bubbles: true }));
+           }
+        }
+      } else if (t.includes('next')) {
+         const btns = Array.from(document.querySelectorAll('button'));
+         const nextBtn = btns.find(b => b.innerText.toLowerCase().includes('next'));
+         if (nextBtn) nextBtn.click();
+      } else if (t.includes('submit')) {
+         const btns = Array.from(document.querySelectorAll('button'));
+         const submitBtn = btns.find(b => b.innerText.toLowerCase().includes('submit'));
+         if (submitBtn) submitBtn.click();
+      } else if (t.includes('back') || t.includes('previous')) {
+         const btns = Array.from(document.querySelectorAll('button'));
+         const prevBtn = btns.find(b => b.innerText.toLowerCase().includes('back') || b.innerText.toLowerCase().includes('previous'));
+         if (prevBtn) prevBtn.click();
+      }
+    });
+
+    recog.addEventListener('end', () => { 
+      listening = false; 
+      btn.style.background = '#0ea5a4'; 
+    });
+
+    return () => {
+      if (btn.parentNode) btn.parentNode.removeChild(btn);
+    };
+  }, []);
+
+  const applyUserData = (userData) => {
+    const newFormData = { ...formData }
+    const newAutofilledFields = new Set()
+
+    // Auto-fill all steps
+    Object.keys(formFields).forEach(stepKey => {
+      formFields[stepKey].fields.forEach(field => {
+        if (field.autofillKey && userData[field.autofillKey] !== undefined && userData[field.autofillKey] !== null) {
+          newFormData[field.id] = String(userData[field.autofillKey])
+          newAutofilledFields.add(field.id)
+        }
+      })
+    })
+
+    setFormData(prev => {
+      const updated = { ...prev, ...newFormData };
+      console.log('Form data updated:', updated);
+      return updated;
+    })
+    setAutofilledFields(prev => {
+      const next = new Set(prev)
+      newAutofilledFields.forEach(f => next.add(f))
+      return next
+    })
+  }
 
   // Validate current step
   const validateStep = (step) => {
