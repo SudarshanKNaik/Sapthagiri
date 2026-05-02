@@ -26,17 +26,7 @@ const formFields = {
     fields: [
       { id: 'income', label: 'Annual Income (₹)', type: 'number', required: true, autofillKey: 'income' },
       { id: 'bank_account', label: 'Bank Account Number', type: 'text', required: true, autofillKey: 'bank_account' },
-      { id: 'ifsc', label: 'IFSC Code', type: 'text', required: true, autofillKey: 'ifsc' },
-      { id: 'occupation', label: 'Occupation', type: 'text', required: true }
-    ]
-  },
-  step4: {
-    title: 'Document Upload',
-    fields: [
-      { id: 'aadhaar_upload', label: 'Aadhaar Card', type: 'file', required: true },
-      { id: 'income_upload', label: 'Income Certificate', type: 'file', required: true },
-      { id: 'marks_upload', label: 'Mark Sheets/Certificates', type: 'file', required: false },
-      { id: 'passbook_upload', label: 'Bank Passbook', type: 'file', required: true }
+      { id: 'ifsc', label: 'IFSC Code', type: 'text', required: true, autofillKey: 'ifsc' }
     ]
   }
 }
@@ -137,7 +127,7 @@ export default function Apply() {
 
   // Handle Review & Submit
   const handleReviewSubmit = () => {
-    const missing = validateStep(4)
+    const missing = validateStep(3)
     if (Object.keys(missing).length > 0) {
       setMissingFields(missing)
       return
@@ -163,7 +153,6 @@ export default function Apply() {
             {currentStep === 1 && '👤'}
             {currentStep === 2 && '📍'}
             {currentStep === 3 && '💰'}
-            {currentStep === 4 && '📄'}
           </span>
           <div>
             <h2 style={{ fontSize: '1.5rem', color: '#0b3d91', marginBottom: '0.25rem' }}>{step.title}</h2>
@@ -280,14 +269,14 @@ export default function Apply() {
         borderBottom: '4px solid #e8f0fd'
       }}>
         <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📝 Welfare Scheme Application</h1>
-        <p style={{ opacity: 0.95, fontSize: '1rem' }}>Complete your application in 4 easy steps</p>
+        <p style={{ opacity: 0.95, fontSize: '1rem' }}>Complete your application in 3 easy steps</p>
       </section>
 
       {/* Main Content */}
       <main className="container" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
         {/* Step Progress */}
         <div className="step-progress" style={{ marginBottom: '3rem' }}>
-          {[1, 2, 3, 4].map(step => (
+          {[1, 2, 3].map(step => (
             <div
               key={step}
               onClick={() => step <= currentStep && setCurrentStep(step)}
@@ -298,7 +287,7 @@ export default function Apply() {
                 {step < currentStep ? '✓' : step === currentStep ? '●' : step}
               </div>
               <div className="step-indicator-label">Step {step}</div>
-              <div className="step-indicator-description">{['Personal', 'Address', 'Financial', 'Documents'][step - 1]}</div>
+              <div className="step-indicator-description">{['Personal', 'Address', 'Financial'][step - 1]}</div>
             </div>
           ))}
         </div>
@@ -325,7 +314,7 @@ export default function Apply() {
               </button>
             )}
             
-            {currentStep < 4 && (
+            {currentStep < 3 && (
               <button
                 onClick={handleNextStep}
                 className="btn btn-primary"
@@ -335,7 +324,7 @@ export default function Apply() {
               </button>
             )}
             
-            {currentStep === 4 && (
+            {currentStep === 3 && (
               <button
                 onClick={handleReviewSubmit}
                 className="btn btn-success"

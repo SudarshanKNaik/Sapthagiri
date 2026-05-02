@@ -138,33 +138,6 @@ export default function Review() {
                 <span className="review-label">IFSC Code</span>
                 <span className="review-value">{appData.formData.ifsc || '—'}</span>
               </div>
-              <div className="review-item">
-                <span className="review-label">Occupation</span>
-                <span className="review-value">{appData.formData.occupation || '—'}</span>
-              </div>
-            </div>
-
-            {/* Documents */}
-            <div className="review-section">
-              <div className="review-section-title">
-                <span>📄</span> Uploaded Documents
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                {Object.entries(appData.uploadedFiles).map(([key, filename]) => (
-                  <div key={key} style={{
-                    background: '#f0fdf4',
-                    border: '1px solid #86efac',
-                    borderRadius: '0.5rem',
-                    padding: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <span style={{ color: '#10b981', fontSize: '1.2rem' }}>✓</span>
-                    <span style={{ color: '#065f46', fontWeight: '500', fontSize: '0.9rem' }}>{filename}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
 
