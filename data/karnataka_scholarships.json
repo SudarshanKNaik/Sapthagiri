@@ -1,0 +1,35 @@
+{
+  "state": "Karnataka",
+  "schemes": [
+    {
+      "id": "KA-VIDYASIRI-2026",
+      "name": "Vidyasiri Food & Accommodation Assistance",
+      "state": "Karnataka",
+      "income_limit": 250000,
+      "min_marks": 50,
+      "deadline": "2026-08-31",
+      "benefit": "Monthly assistance for eligible students",
+      "required_documents": ["aadhaar", "income_certificate", "marks_card", "bank_passbook"]
+    },
+    {
+      "id": "KA-SSP-POSTMATRIC-2026",
+      "name": "SSP Post-Matric Scholarship (SC/ST/OBC)",
+      "state": "Karnataka",
+      "income_limit": 200000,
+      "min_marks": 60,
+      "deadline": "2026-09-15",
+      "benefit": "Tuition + maintenance support via SSP",
+      "required_documents": ["aadhaar", "income_certificate", "marks_card", "bank_passbook"]
+    },
+    {
+      "id": "KA-MERIT-CUM-MEANS-2026",
+      "name": "Merit-cum-Means (Minorities)",
+      "state": "Karnataka",
+      "income_limit": 350000,
+      "min_marks": 55,
+      "deadline": "2026-10-01",
+      "benefit": "Scholarship for minority community students",
+      "required_documents": ["aadhaar", "income_certificate", "marks_card", "bank_passbook"]
+    }
+  ]
+}

@@ -1,0 +1,383 @@
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
+const { v4: uuidv4 } = require("uuid");
+
+const { runOcr } = require("./ocrService");
+const { classifyDocument } = require("./classify");
+const { extractProfileFields, extractIssueDate } = require("./extractors");
+const { readJson, writeJson, ensureDir } = require("./storage");
+const { listSchemes, computeEligibility } = require("./eligibility");
+const { simplifyInstruction } = require("./instructionSimplifier");
+const {
+  sendEligibilitySMS,
+  sendMissingDocumentSMS,
+  sendSubmissionSMS,
+  sendStatusUpdateSMS,
+} = require("./smsService");
+
+const PORT = process.env.PORT || 3001;
+const UPLOAD_DIR = path.resolve(__dirname, "..", "uploads");
+const LOCKER_PATH = path.resolve(__dirname, "..", "data", "locker.json");
+const HISTORY_PATH = path.resolve(__dirname, "..", "data", "history.json");
+
+ensureDir(UPLOAD_DIR);
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOAD_DIR);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname || "");
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+
+const upload = multer({ storage });
+
+const app = express();
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: "2mb" }));
+
+function getSessionId(req) {
+  return req.headers["x-session-id"] || req.body?.sessionId || req.query?.sessionId || "";
+}
+
+function lockerUpsert(sessionId, patch) {
+  const db = readJson(LOCKER_PATH, { users: {} });
+  db.users[sessionId] = {
+    ...(db.users[sessionId] || {}),
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  };
+  writeJson(LOCKER_PATH, db);
+  return db.users[sessionId];
+}
+
+function historyAppend(sessionId, entry) {
+  const db = readJson(HISTORY_PATH, { users: {} });
+  db.users[sessionId] = db.users[sessionId] || [];
+  db.users[sessionId].unshift(entry);
+  writeJson(HISTORY_PATH, db);
+  return db.users[sessionId];
+}
+
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/login", (req, res) => {
+  const sessionId = uuidv4();
+  lockerUpsert(sessionId, { phone: (req.body?.phone || "").toString(), language: "en" });
+  res.json({ sessionId });
+});
+
+app.post("/api/language", (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  const language = (req.body?.language || "en").toString();
+  const locker = lockerUpsert(sessionId, { language });
+  res.json({ ok: true, locker });
+});
+
+app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  if (!req.file?.path) return res.status(400).json({ error: "Missing file" });
+
+  const reuse = String(req.body?.reuse || "false") === "true";
+  const preferredLang = (req.body?.ocrLang || "eng").toString();
+
+  const filePath = req.file.path;
+
+  let ocr;
+  try {
+    try {
+      ocr = await runOcr(filePath, preferredLang);
+    } catch (e) {
+      ocr = await runOcr(filePath, "eng");
+    }
+
+    const docTypeDetected = classifyDocument(ocr.text);
+    const issueDate = extractIssueDate(ocr.text);
+    const profileFields = extractProfileFields(ocr.text);
+
+    const extracted = {
+      name: profileFields.name.value,
+      dob: profileFields.dob.value,
+      income: profileFields.income.value,
+      marks: profileFields.marks.value,
+      accountNumber: profileFields.accountNumber.value,
+      ifsc: profileFields.ifsc.value,
+    };
+
+    const confidence = {
+      name: profileFields.name.confidence,
+      dob: profileFields.dob.confidence,
+      income: profileFields.income.confidence,
+      marks: profileFields.marks.confidence,
+      accountNumber: profileFields.accountNumber.confidence,
+      ifsc: profileFields.ifsc.confidence,
+    };
+
+    // expiry detection: default 365 days for certificates (income)
+    let expiry = { status: "unknown" };
+    if (issueDate) {
+      const parts = issueDate.split(/\//g);
+      const [dd, mm, yyyy] = parts.map((p) => Number(p));
+      const issued = new Date(yyyy, (mm || 1) - 1, dd || 1);
+      const ageDays = Math.floor((Date.now() - issued.getTime()) / (1000 * 60 * 60 * 24));
+      const expired = ageDays > 365;
+      expiry = { issueDate, expired, ageDays };
+    }
+
+    const locker = lockerUpsert(sessionId, {
+      profile: {
+        ...(readJson(LOCKER_PATH, { users: {} }).users?.[sessionId]?.profile || {}),
+        ...extracted,
+      },
+      verification: confidence,
+      documents: {
+        ...(readJson(LOCKER_PATH, { users: {} }).users?.[sessionId]?.documents || {}),
+        [docTypeDetected]: true,
+      },
+      reuse,
+    });
+
+    // 1) Eligibility Detected SMS
+    // Trigger: OCR complete + profile generated + at least one eligible scheme.
+    try {
+      const phone = (locker.phone || "").toString();
+      const alreadySent = locker?.smsFlags?.eligibilitySent === true;
+      if (phone && !alreadySent) {
+        const profileForEligibility = {
+          ...(locker.profile || {}),
+          documents: locker.documents || {},
+          state: "Karnataka",
+        };
+
+        const results = computeEligibility(profileForEligibility);
+        const eligibleSchemes = results
+          .filter((r) => r.status === "eligible")
+          .map((r) => r.scheme?.name)
+          .filter(Boolean);
+
+        if (eligibleSchemes.length > 0) {
+          await sendEligibilitySMS({
+            to: phone,
+            scholarshipNames: eligibleSchemes.slice(0, 2),
+          });
+
+          lockerUpsert(sessionId, { smsFlags: { ...(locker.smsFlags || {}), eligibilitySent: true } });
+        }
+      }
+    } catch {
+      // ignore SMS failures
+    }
+
+    res.json({
+      docTypeDetected,
+      ocrConfidence: ocr.confidence,
+      extracted,
+      confidence,
+      expiry,
+      locker,
+    });
+  } catch (e) {
+    res.status(500).json({ error: "OCR failed", details: String(e?.message || e) });
+  } finally {
+    if (!reuse) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {
+        // ignore
+      }
+    }
+  }
+});
+
+app.get("/api/locker", (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  const db = readJson(LOCKER_PATH, { users: {} });
+  res.json({ locker: db.users[sessionId] || null });
+});
+
+app.post("/api/locker/upsert", (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  const patch = req.body?.patch || {};
+  const locker = lockerUpsert(sessionId, patch);
+  res.json({ locker });
+});
+
+app.get("/api/schemes", (req, res) => {
+  res.json({ schemes: listSchemes() });
+});
+
+app.post("/api/eligibility", (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+
+  const db = readJson(LOCKER_PATH, { users: {} });
+  const locker = db.users[sessionId] || {};
+  const profile = {
+    ...(locker.profile || {}),
+    documents: locker.documents || {},
+    state: "Karnataka",
+  };
+
+  const results = computeEligibility(profile);
+  res.json({ profile, results });
+});
+
+// 2) Missing Document Alert SMS
+// Trigger: when user selects a scheme to apply and required docs are missing.
+app.post("/api/sms/missing-documents", async (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+
+  const schemeId = (req.body?.schemeId || "").toString();
+  if (!schemeId) return res.status(400).json({ error: "Missing schemeId" });
+
+  const db = readJson(LOCKER_PATH, { users: {} });
+  const locker = db.users[sessionId] || {};
+  const phone = (locker.phone || "").toString();
+  if (!phone) return res.json({ ok: false, reason: "No phone on file" });
+
+  const scheme = listSchemes().find((s) => s.id === schemeId);
+  if (!scheme) return res.status(404).json({ error: "Scheme not found" });
+
+  const docs = locker.documents || {};
+  const missing = (scheme.required_documents || []).filter((d) => !docs[d]);
+
+  if (missing.length === 0) return res.json({ ok: true, sent: false, reason: "No missing documents" });
+
+  try {
+    const result = await sendMissingDocumentSMS({ to: phone, documents: missing });
+    res.json({ ok: true, result });
+  } catch (e) {
+    res.json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+app.post("/api/sms/ocr-alert", async (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  const locker = lockerRead(sessionId);
+  const phone = (locker.phone || "").toString();
+  if (!phone) return res.status(400).json({ error: "No phone number" });
+
+  try {
+    const { sendMissingDocumentSMS } = require("./smsService");
+    const result = await sendMissingDocumentSMS({ to: phone, documents: ["Unclear Document"] });
+    res.json({ ok: true, result });
+  } catch (e) {
+    res.json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+app.post("/api/sms/missing-core", async (req, res) => {
+  const sessionId = getSessionId(req);
+  console.log(`[SMS] Request for missing-core. Session: ${sessionId}`);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  const locker = lockerRead(sessionId);
+  const phone = (locker.phone || "").toString();
+  if (!phone) return res.status(400).json({ error: "No phone number" });
+  
+  const missing = req.body?.missing || [];
+  if (!missing.length) return res.json({ ok: true, sent: false });
+
+  try {
+    const { sendMissingDocumentSMS } = require("./smsService");
+    const result = await sendMissingDocumentSMS({ to: phone, documents: missing });
+    res.json({ ok: true, result });
+  } catch (e) {
+    res.json({ ok: false, error: String(e?.message || e) });
+  }
+});
+
+
+app.post("/api/simplify", (req, res) => {
+  const text = (req.body?.text || "").toString();
+  res.json({ simplified: simplifyInstruction(text) });
+});
+
+app.post("/api/submit", async (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+
+  const schemeId = (req.body?.schemeId || "").toString();
+  const trackingId = `TRK-${Math.random().toString(36).slice(2, 8).toUpperCase()}-${Date.now().toString().slice(-4)}`;
+
+  const entry = {
+    schemeId,
+    trackingId,
+    status: "submitted",
+    submittedAt: new Date().toISOString(),
+  };
+
+  historyAppend(sessionId, entry);
+
+  // 3) Application Submitted Confirmation SMS
+  try {
+    const scheme = listSchemes().find((s) => s.id === schemeId);
+    await sendSubmissionSMS({
+      to: (req.body?.phone || "").toString(),
+      scholarshipName: scheme?.name || schemeId,
+      trackingId,
+    });
+  } catch {
+    // ignore
+  }
+
+  res.json({ ok: true, trackingId });
+});
+
+// 4) Application Status Update SMS (demo endpoint)
+app.post("/api/status/update", async (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  const trackingId = (req.body?.trackingId || "").toString();
+  const applicationStatus = (req.body?.status || "").toString();
+  if (!trackingId || !applicationStatus) return res.status(400).json({ error: "Missing trackingId or status" });
+
+  const db = readJson(HISTORY_PATH, { users: {} });
+  const entries = db.users[sessionId] || [];
+  const found = entries.find((e) => e.trackingId === trackingId);
+  if (!found) return res.status(404).json({ error: "Tracking ID not found" });
+
+  found.status = applicationStatus;
+  writeJson(HISTORY_PATH, db);
+
+  const lockerDb = readJson(LOCKER_PATH, { users: {} });
+  const locker = lockerDb.users[sessionId] || {};
+  const phone = (locker.phone || "").toString();
+  const scheme = listSchemes().find((s) => s.id === found.schemeId);
+
+  try {
+    const result = await sendStatusUpdateSMS({
+      to: phone,
+      scholarshipName: scheme?.name || found.schemeId,
+      applicationStatus,
+      trackingId,
+    });
+    res.json({ ok: true, updated: true, sms: result });
+  } catch (e) {
+    res.json({ ok: true, updated: true, sms: { sent: false, error: String(e?.message || e) } });
+  }
+});
+
+app.get("/api/history", (req, res) => {
+  const sessionId = getSessionId(req);
+  if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  const db = readJson(HISTORY_PATH, { users: {} });
+  res.json({ history: db.users[sessionId] || [] });
+});
+
+const http = require("http");
+http.createServer(app).listen(PORT, () => {
+  console.log(`SAHAYAK AI backend listening on http://localhost:${PORT}`);
+});
