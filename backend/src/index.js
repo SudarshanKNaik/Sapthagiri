@@ -452,7 +452,7 @@ app.post("/api/assistant", async (req, res) => {
   const { prompt, sessionId } = req.body;
   if (!prompt) return res.status(400).json({ error: "Missing prompt" });
 
-  const apiKey = process.env.GROK_API_KEY;
+  const apiKey = (process.env.GROK_API_KEY || "").trim();
   if (!apiKey) {
     return res.json({ reply: "I'm sorry, Grok is not configured. Please check the GROK_API_KEY in the backend .env file." });
   }
@@ -474,7 +474,7 @@ app.post("/api/assistant", async (req, res) => {
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || "grok-beta",
+        model: process.env.GROK_MODEL || "grok-2",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt }
