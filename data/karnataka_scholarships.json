@@ -30,6 +30,16 @@
       "deadline": "2026-10-01",
       "benefit": "Scholarship for minority community students",
       "required_documents": ["aadhaar", "income_certificate", "marks_card", "bank_passbook"]
+    },
+    {
+      "id": "KA-CM-MERIT-2026",
+      "name": "Chief Minister's Merit Scholarship (Distinction)",
+      "state": "Karnataka",
+      "income_limit": 500000,
+      "min_marks": 90,
+      "deadline": "2026-12-15",
+      "benefit": "₹50,000 Special Award for Distinction Students",
+      "required_documents": ["aadhaar", "income_certificate", "marks_card", "bank_passbook"]
     }
   ]
 }

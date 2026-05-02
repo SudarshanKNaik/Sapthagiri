@@ -45,11 +45,30 @@ function getSessionId(req) {
   return req.headers["x-session-id"] || req.body?.sessionId || req.query?.sessionId || "";
 }
 
+function lockerRead(sessionId) {
+  const db = readJson(LOCKER_PATH, { users: {} });
+  return db.users[sessionId] || {};
+}
+
 function lockerUpsert(sessionId, patch) {
   const db = readJson(LOCKER_PATH, { users: {} });
+  const old = db.users[sessionId] || {};
+  
   db.users[sessionId] = {
-    ...(db.users[sessionId] || {}),
+    ...old,
     ...patch,
+    profile: {
+      ...(old.profile || {}),
+      ...(patch.profile || {}),
+    },
+    verification: {
+      ...(old.verification || {}),
+      ...(patch.verification || {}),
+    },
+    documents: {
+      ...(old.documents || {}),
+      ...(patch.documents || {}),
+    },
     updatedAt: new Date().toISOString(),
   };
   writeJson(LOCKER_PATH, db);
@@ -283,9 +302,11 @@ app.post("/api/sms/missing-core", async (req, res) => {
   const sessionId = getSessionId(req);
   console.log(`[SMS] Request for missing-core. Session: ${sessionId}`);
   if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
+  
   const locker = lockerRead(sessionId);
   const phone = (locker.phone || "").toString();
-  if (!phone) return res.status(400).json({ error: "No phone number" });
+  console.log(`[SMS] Target phone: ${phone}`);
+  if (!phone) return res.status(400).json({ error: "No phone number found in session" });
   
   const missing = req.body?.missing || [];
   if (!missing.length) return res.json({ ok: true, sent: false });
@@ -293,9 +314,11 @@ app.post("/api/sms/missing-core", async (req, res) => {
   try {
     const { sendMissingDocumentSMS } = require("./smsService");
     const result = await sendMissingDocumentSMS({ to: phone, documents: missing });
+    console.log(`[SMS] Result:`, result);
     res.json({ ok: true, result });
   } catch (e) {
-    res.json({ ok: false, error: String(e?.message || e) });
+    console.error(`[SMS] Error:`, e);
+    res.status(500).json({ ok: false, error: String(e?.message || e) });
   }
 });
 

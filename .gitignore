@@ -4,6 +4,7 @@ backend/node_modules/
 backend/.env
 backend/uploads/
 backend/data/*.json
+!backend/data/sms_templates.json
 frontend/node_modules/
 frontend/dist/
 .vscode/

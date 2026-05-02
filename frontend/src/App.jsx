@@ -250,10 +250,7 @@ export default function App() {
       }[expectedType] || "document";
 
       if (res.docTypeDetected === "unknown") {
-        try {
-          await apiFetch("/api/sms/ocr-alert", { sessionId, method: "POST" });
-        } catch {}
-        setError(`This is not a valid ${friendlyName}. I've sent you an SMS alert. Please upload another one.`);
+        setError(`This is not a valid ${friendlyName}. Please upload another one.`);
         return;
       }
       
@@ -276,15 +273,7 @@ export default function App() {
     const missing = coreDocs.filter(d => !docs[d]);
     
     if (missing.length > 0) {
-      setError(`Please upload all required documents first. I've sent an SMS alert with the missing list.`);
-      if (online) {
-        try {
-          const res = await apiFetch("/api/sms/missing-core", { sessionId, method: "POST", body: { missing } });
-          if (!res.ok) setError(`SMS Alert failed: ${res.error || "Unknown error"}`);
-        } catch (e) {
-          setError(`SMS Alert error: ${e.message}`);
-        }
-      }
+      setError(`Please upload all required documents first.`);
       return;
     }
 

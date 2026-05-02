@@ -1,0 +1,8 @@
+{
+  "eligibility_single": "SAHAYAK AI: Good news!\n\nYou are eligible for:\n{SCHOLARSHIP_NAME}\n\nNext step:\nOpen the app to apply now.",
+  "eligibility_multi": "SAHAYAK AI: Good news!\n\nYou are eligible for:\n{SCHOLARSHIP_LIST}\n\nOpen the app to choose one and apply.",
+  "missing_document_single": "SAHAYAK AI: Your application is incomplete.\n\nMissing document:\n{DOCUMENT_NAME}\n\nPlease upload it to continue.",
+  "missing_document_multi": "SAHAYAK AI: Your application is incomplete.\n\nMissing documents:\n{DOCUMENT_LIST}\n\nUpload them to continue your application.",
+  "submission": "SAHAYAK AI: Your application for\n{SCHOLARSHIP_NAME}\nhas been submitted successfully.\n\nTracking ID: {TRACKING_ID}\n\nWe will notify you when the status changes.",
+  "status_update": "SAHAYAK AI: Update for\n{SCHOLARSHIP_NAME}\n\nStatus:\n{APPLICATION_STATUS}\n\nTracking ID: {TRACKING_ID}"
+}
