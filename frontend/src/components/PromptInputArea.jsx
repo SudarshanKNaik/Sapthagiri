@@ -11,7 +11,7 @@ export default function PromptInputArea({ onSend, onVoice, onUpload }) {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl items-end gap-3 rounded-2xl border-2 border-slate-200 bg-white p-2 focus-within:border-ai-primary">
+    <div className="mx-auto flex w-full max-w-4xl items-end gap-3 rounded-2xl border-2 border-slate-200 bg-white p-2 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100">
       <button
         type="button"
         onClick={onUpload}
@@ -50,7 +50,7 @@ export default function PromptInputArea({ onSend, onVoice, onUpload }) {
       <button
         type="button"
         onClick={handleSend}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ai-primary text-white hover:opacity-90 disabled:opacity-50"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
         disabled={!text.trim()}
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

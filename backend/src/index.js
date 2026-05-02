@@ -4,6 +4,9 @@ const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+require("dotenv").config();
 
 const { runOcr } = require("./ocrService");
 const { classifyDocument } = require("./classify");
@@ -18,7 +21,10 @@ const {
   sendStatusUpdateSMS,
 } = require("./smsService");
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash-latest";
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const UPLOAD_DIR = path.resolve(__dirname, "..", "uploads");
 const LOCKER_PATH = path.resolve(__dirname, "..", "data", "locker.json");
 const HISTORY_PATH = path.resolve(__dirname, "..", "data", "history.json");
@@ -349,6 +355,21 @@ app.post("/api/sms/missing-core", async (req, res) => {
   }
 });
 
+app.post("/api/chat", async (req, res) => {
+  if (!genAI) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
+  const text = (req.body?.text || "").toString().trim();
+  if (!text) return res.status(400).json({ error: "Missing text" });
+
+  try {
+    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-1.5-flash" });
+    const prompt = `You are Sahayak AI, a helpful scholarship assistant. Reply concisely and clearly.\n\nUser: ${text}`;
+    const result = await model.generateContent(prompt);
+    const reply = result?.response?.text?.() || "";
+    res.json({ reply });
+  } catch (e) {
+    res.status(500).json({ error: e?.message || "Chat failed" });
+  }
+});
 
 app.post("/api/simplify", (req, res) => {
   const text = (req.body?.text || "").toString();
@@ -425,6 +446,55 @@ app.get("/api/history", (req, res) => {
   if (!sessionId) return res.status(400).json({ error: "Missing sessionId" });
   const db = readJson(HISTORY_PATH, { users: {} });
   res.json({ history: db.users[sessionId] || [] });
+});
+
+app.post("/api/assistant", async (req, res) => {
+  const { prompt, sessionId } = req.body;
+  if (!prompt) return res.status(400).json({ error: "Missing prompt" });
+
+  const apiKey = process.env.GROK_API_KEY;
+  if (!apiKey) {
+    return res.json({ reply: "I'm sorry, Grok is not configured. Please check the GROK_API_KEY in the backend .env file." });
+  }
+
+  try {
+    // Fetch user context for better answers
+    const lockerDb = readJson(LOCKER_PATH, { users: {} });
+    const locker = lockerDb.users[sessionId] || {};
+    const profile = JSON.stringify(locker.profile || {});
+
+    const systemPrompt = `You are SAHAYAK AI, a helpful scholarship assistant for students in Karnataka, India. 
+    Use the following user profile context if available: ${profile}.
+    Be concise, empathetic, and professional. If the user asks about eligibility, remind them to upload their documents for a 100% accurate check.`;
+
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: process.env.GROK_MODEL || "grok-beta",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.1
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Grok Full Error:", errorText);
+      throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    res.json({ reply: data.choices[0].message.content });
+  } catch (e) {
+    console.error("Grok Error:", e);
+    res.status(500).json({ error: "Grok Assistant failed to respond" });
+  }
 });
 
 const http = require("http");

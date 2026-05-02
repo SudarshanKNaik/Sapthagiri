@@ -58,6 +58,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lastOcr, setLastOcr] = useState(null);
+  const [assistantReply, setAssistantReply] = useState("");
+  const [assistantBusy, setAssistantBusy] = useState(false);
 
   const [eligibility, setEligibility] = useState(null);
   const [selectedCompareIds, setSelectedCompareIds] = useState([]);
@@ -166,11 +168,41 @@ export default function App() {
 
   const schemesForCompare = useMemo(() => {
     const results = eligibility?.results || [];
-    const map = new Map(results.map((r) => [r.scheme.id, r.scheme]));
+    // Safety check: Filter out any results that don't have a valid scheme object
+    const map = new Map(results.filter(r => r?.scheme?.id).map((r) => [r.scheme.id, r.scheme]));
     return selectedCompareIds.map((id) => map.get(id)).filter(Boolean);
   }, [eligibility, selectedCompareIds]);
 
-  const nextAction = useMemo(() => computeNextBestAction({ locker, eligibilityResults: eligibility?.results }), [locker, eligibility]);
+  const nextAction = useMemo(() => {
+    try {
+      return computeNextBestAction({ locker, eligibilityResults: eligibility?.results });
+    } catch (e) {
+      console.error("NextAction Error:", e);
+      return "";
+    }
+  }, [locker, eligibility]);
+  
+  async function sendAssistantPrompt(text) {
+    if (!text) return;
+    setAssistantBusy(true);
+    setAssistantReply("");
+    try {
+      const res = await apiFetch("/api/assistant", {
+        method: "POST",
+        body: { prompt: text, sessionId }
+      });
+      setAssistantReply(res.reply);
+    } catch (e) {
+      const msg = e?.message || "Chat failed";
+      if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
+        setAssistantReply("AI is rate-limited. Please wait a minute and try again.");
+      } else {
+        setAssistantReply(msg);
+      }
+    } finally {
+      setAssistantBusy(false);
+    }
+  }
 
   async function doLogin() {
     setError("");
@@ -511,7 +543,7 @@ export default function App() {
           {view === "upload" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-start gap-4">
-                <div className="h-10 w-10 shrink-0 bg-ai-secondary rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-ai-secondary/20">AI</div>
+                <div className="h-10 w-10 shrink-0 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/20">AI</div>
                 <div className="flex-1 space-y-2">
                   <div className="rounded-2xl rounded-tl-sm bg-slate-100 p-4 text-slate-800 text-sm leading-relaxed shadow-sm">
                     Let's gather your documents. I'll automatically read them and fill out the forms for you. What would you like to upload first?
@@ -555,7 +587,7 @@ export default function App() {
           {view === "eligibility" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-start gap-4">
-                <div className="h-10 w-10 shrink-0 bg-ai-secondary rounded-full flex items-center justify-center text-white font-bold shadow-md">AI</div>
+                <div className="h-10 w-10 shrink-0 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/20">AI</div>
                 <div className="flex-1 space-y-2">
                   <div className="rounded-2xl rounded-tl-sm bg-slate-100 p-4 text-slate-800 text-sm leading-relaxed shadow-sm">
                     Based on your profile, I found these matching scholarships. I recommend the ones marked in orange!
@@ -606,7 +638,7 @@ export default function App() {
           {view === "apply" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                <div className="flex items-start gap-4">
-                <div className="h-10 w-10 shrink-0 bg-ai-secondary rounded-full flex items-center justify-center text-white font-bold shadow-md">AI</div>
+                <div className="h-10 w-10 shrink-0 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/20">AI</div>
                 <div className="flex-1 space-y-2">
                   <div className="rounded-2xl rounded-tl-sm bg-slate-100 p-4 text-slate-800 text-sm leading-relaxed shadow-sm">
                     I've auto-filled the application for {activeScheme?.name}. Please verify the fields below. Green means I'm highly confident in the data.
@@ -638,14 +670,19 @@ export default function App() {
       </div>
 
       {/* Right Panel */}
-      <div className="hidden lg:block lg:col-span-3 border-l border-slate-200 bg-slate-50 p-5 overflow-y-auto">
+      <div className="hidden lg:flex lg:flex-col lg:col-span-3 border-l border-slate-200 bg-white p-5 overflow-y-auto">
         <ReasoningPanel activeScheme={activeScheme} confidenceMap={locker?.verification} lastOcr={lastOcr} />
       </div>
 
       {/* Bottom Panel */}
       <div className="col-span-1 md:col-span-12 border-t border-slate-200 bg-white p-3 md:p-4 z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+        {(assistantBusy || assistantReply) && (
+          <div className="mx-auto mb-3 w-full max-w-4xl rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            {assistantBusy ? "Thinking..." : assistantReply}
+          </div>
+        )}
         <PromptInputArea 
-          onSend={(text) => console.log("User prompt:", text)}
+          onSend={sendAssistantPrompt}
           onVoice={() => alert("Listening...")}
           onUpload={() => setView("upload")}
         />
