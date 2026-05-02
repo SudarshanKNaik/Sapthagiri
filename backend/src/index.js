@@ -23,7 +23,7 @@ const {
 
 const PORT = process.env.PORT || 3002;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash-latest";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const UPLOAD_DIR = path.resolve(__dirname, "..", "uploads");
 const LOCKER_PATH = path.resolve(__dirname, "..", "data", "locker.json");
@@ -361,7 +361,7 @@ app.post("/api/chat", async (req, res) => {
   if (!text) return res.status(400).json({ error: "Missing text" });
 
   try {
-    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
     const prompt = `You are Sahayak AI, a helpful scholarship assistant. Reply concisely and clearly.\n\nUser: ${text}`;
     const result = await model.generateContent(prompt);
     const reply = result?.response?.text?.() || "";
@@ -449,13 +449,9 @@ app.get("/api/history", (req, res) => {
 });
 
 app.post("/api/assistant", async (req, res) => {
+  if (!genAI) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
   const { prompt, sessionId } = req.body;
   if (!prompt) return res.status(400).json({ error: "Missing prompt" });
-
-  const apiKey = (process.env.GROK_API_KEY || "").trim();
-  if (!apiKey) {
-    return res.json({ reply: "I'm sorry, Grok is not configured. Please check the GROK_API_KEY in the backend .env file." });
-  }
 
   try {
     // Fetch user context for better answers
@@ -467,33 +463,14 @@ app.post("/api/assistant", async (req, res) => {
     Use the following user profile context if available: ${profile}.
     Be concise, empathetic, and professional. If the user asks about eligibility, remind them to upload their documents for a 100% accurate check.`;
 
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: process.env.GROK_MODEL || "grok-2",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.1
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Grok Full Error:", errorText);
-      throw new Error(`Grok API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    res.json({ reply: data.choices[0].message.content });
+    console.log(`[ASSISTANT] Using model: ${process.env.GEMINI_MODEL || "gemini-2.5-flash"}`);
+    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
+    const result = await model.generateContent(`${systemPrompt}\n\nUser: ${prompt}`);
+    const reply = result?.response?.text?.() || "";
+    res.json({ reply });
   } catch (e) {
-    console.error("Grok Error:", e);
-    res.status(500).json({ error: "Grok Assistant failed to respond" });
+    console.error("Assistant Error:", e);
+    res.status(500).json({ error: "Assistant failed to respond" });
   }
 });
 
