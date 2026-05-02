@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { LANGS, t } from "./i18n";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { apiFetch, ocrLangFromUiLang } from "./services/api";
@@ -61,13 +61,32 @@ export default function App() {
   const [assistantReply, setAssistantReply] = useState("");
   const [assistantBusy, setAssistantBusy] = useState(false);
 
+  const [handsfreeReady, setHandsfreeReady] = useState(false);
+  const [handsfreeEnabled, setHandsfreeEnabled] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [pendingUpload, setPendingUpload] = useState(null);
+  const handsfreeRef = useRef(null);
+  const phoneInputRef = useRef(null);
+  const transcriptTimeoutRef = useRef(null);
+  const pendingUploadTimerRef = useRef(null);
+
   const [eligibility, setEligibility] = useState(null);
   const [selectedCompareIds, setSelectedCompareIds] = useState([]);
   const [activeScheme, setActiveScheme] = useState(null);
   const [trackingId, setTrackingId] = useState("");
   const [history, setHistory] = useState([]);
+  const [iframeUrl, setIframeUrl] = useState(null);
 
   const [online, setOnline] = useState(() => navigator.onLine);
+
+  // Clear transcript automatically
+  useEffect(() => {
+    if (voiceTranscript) {
+      if (transcriptTimeoutRef.current) clearTimeout(transcriptTimeoutRef.current);
+      transcriptTimeoutRef.current = setTimeout(() => setVoiceTranscript(""), 3000);
+    }
+  }, [voiceTranscript]);
+
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
@@ -166,9 +185,115 @@ export default function App() {
     if (sessionId) setView("upload");
   }, [sessionId]);
 
+  const sapthagiriModule = useMemo(() => ({
+    name: "Sapthagiri",
+    description: "Sapthagiri App Commands",
+    contexts: [{
+      context: "root",
+      commands: [
+        // ── Mobile number entry ──
+        { 
+          name: "enter mobile number", 
+          action: () => { setVoiceTranscript("enter mobile number"); document.getElementById("input-phone")?.focus(); } 
+        },
+        { 
+          name: "mobile number", 
+          action: () => { setVoiceTranscript("mobile number"); document.getElementById("input-phone")?.focus(); } 
+        },
+        { 
+          name: "my number is", 
+          regexp: /my number is ([\d\s]+)/,
+          action: (match) => {
+            setVoiceTranscript(match[0]);
+            const num = match[1].replace(/\s/g, "");
+            setPhone(num);
+          }
+        },
+        { 
+          name: "set number to", 
+          regexp: /set number to ([\d\s]+)/,
+          action: (match) => {
+            setVoiceTranscript(match[0]);
+            const num = match[1].replace(/\s/g, "");
+            setPhone(num);
+          }
+        },
+        // ── Session ──
+        { name: "start session", action: () => { setVoiceTranscript("start session"); document.getElementById("btn-start-session")?.click(); } },
+        { name: "start", action: () => { setVoiceTranscript("start"); document.getElementById("btn-start-session")?.click(); } },
+        // ── Uploads (highlight card so user taps it — browser blocks async file pickers) ──
+        { name: "aadhaar upload", action: () => { setVoiceTranscript("Say aadhaar upload"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("aadhaar"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+        { name: "aadhar upload", action: () => { setVoiceTranscript("Tap the glowing Aadhaar card"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("aadhaar"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+        { name: "income certificate upload", action: () => { setVoiceTranscript("Tap the glowing Income Certificate card"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("income_certificate"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+        { name: "marks card upload", action: () => { setVoiceTranscript("Tap the glowing Marks Card"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("marks_card"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+        { name: "bank passbook upload", action: () => { setVoiceTranscript("Tap the glowing Bank Passbook card"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("bank_passbook"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+        // ── Eligibility & Refresh ──
+        { name: "click check eligibility", action: () => { setVoiceTranscript("click check eligibility"); document.getElementById("btn-check-eligibility")?.click(); } },
+        { name: "check eligibility", action: () => { setVoiceTranscript("check eligibility"); document.getElementById("btn-check-eligibility")?.click(); } },
+        { name: "click refresh", action: () => { setVoiceTranscript("click refresh"); document.getElementById("btn-refresh")?.click(); } },
+        { name: "refresh", action: () => { setVoiceTranscript("refresh"); document.getElementById("btn-refresh")?.click(); } },
+        // ── Logout ──
+        { name: "logout", action: () => { setVoiceTranscript("logout"); document.getElementById("btn-logout")?.click(); } },
+        { name: "reset", action: () => { setVoiceTranscript("reset"); document.getElementById("btn-logout")?.click(); } },
+        // ── Close embedded portal ──
+        { name: "close portal", action: () => { setVoiceTranscript("close portal"); setIframeUrl(null); } },
+        { name: "close", action: () => { setVoiceTranscript("close"); setIframeUrl(null); } },
+        // ── Navigation ──
+        { name: "login", action: () => { setVoiceTranscript("login"); setView("login"); } },
+        { name: "dashboard", action: () => { setVoiceTranscript("dashboard"); setView("upload"); } },
+        { name: "upload", action: () => { setVoiceTranscript("upload"); setView("upload"); } },
+        { name: "show history", action: () => { setVoiceTranscript("show history"); loadHistory(); setView("history"); } },
+        { name: "history", action: () => { setVoiceTranscript("history"); loadHistory(); setView("history"); } },
+        { name: "language", action: () => { setVoiceTranscript("language"); setView("language"); } },
+        { name: "english", action: () => { setVoiceTranscript("english"); saveLanguage("en"); } },
+        { name: "kannada", action: () => { setVoiceTranscript("kannada"); saveLanguage("kn"); } },
+        { name: "hindi", action: () => { setVoiceTranscript("hindi"); saveLanguage("hi"); } },
+        { name: "compare", action: () => { setVoiceTranscript("compare"); setView("compare"); } },
+        { name: "submit", action: () => { setVoiceTranscript("submit"); submitApplication(); } },
+        { name: "go back", action: () => { setVoiceTranscript("go back"); setView("upload"); } },
+        {
+          name: "catch-all",
+          regexp: /(.*)/,
+          action: (match) => {
+            setVoiceTranscript(match[1]);
+          }
+        }
+      ]
+    }]
+  }), [loadEligibility, loadHistory, saveLanguage, submitApplication, doLogin, setPhone]);
+
+  useEffect(() => {
+    if (handsfreeRef.current) return undefined;
+    try {
+      const handsfreeApi = window.handsfreeForWebsite;
+      if (!handsfreeApi) {
+        console.warn("Handsfree API not found on window");
+        return;
+      }
+      handsfreeRef.current = handsfreeApi.init({
+        turnedOn: false,
+        continuesRecognition: true,
+      });
+      handsfreeRef.current.addModules([sapthagiriModule]);
+      setHandsfreeReady(true);
+    } catch (e) {
+      console.error("Handsfree Init Error:", e);
+    }
+  }, [sapthagiriModule]);
+
+  const toggleHandsfree = () => {
+    if (!handsfreeRef.current) return;
+    if (handsfreeEnabled) {
+      handsfreeRef.current.turnOff();
+      setHandsfreeEnabled(false);
+    } else {
+      handsfreeRef.current.turnOn();
+      setHandsfreeEnabled(true);
+    }
+  };
+
   const schemesForCompare = useMemo(() => {
     const results = eligibility?.results || [];
-    // Safety check: Filter out any results that don't have a valid scheme object
     const map = new Map(results.filter(r => r?.scheme?.id).map((r) => [r.scheme.id, r.scheme]));
     return selectedCompareIds.map((id) => map.get(id)).filter(Boolean);
   }, [eligibility, selectedCompareIds]);
@@ -192,6 +317,12 @@ export default function App() {
         body: { prompt: text, sessionId }
       });
       setAssistantReply(res.reply);
+      // TTS
+      if (res.reply && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(res.reply);
+        window.speechSynthesis.speak(utter);
+      }
     } catch (e) {
       const msg = e?.message || "Chat failed";
       if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
@@ -253,7 +384,6 @@ export default function App() {
           file,
         });
 
-        // Mark pending doc upload in locker UI.
         setLocker((prev) => ({
           ...(prev || {}),
           documentsPending: {
@@ -299,7 +429,6 @@ export default function App() {
       }
       
       setLastOcr(res);
-      // Merge the returned profile (which includes documents) into local locker state
       if (res.profile) {
         setLocker((prev) => ({
           ...(prev || {}),
@@ -328,7 +457,6 @@ export default function App() {
     }
 
     if (!online) {
-      // Offline eligibility from cached schemes + current locker.
       const profile = {
         ...(locker?.profile || {}),
         documents: locker?.documents || {},
@@ -419,6 +547,7 @@ export default function App() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> PRIVACY ON
               </span>
               <button 
+                id="btn-logout"
                 onClick={() => {
                   localStorage.clear();
                   window.location.reload();
@@ -500,6 +629,8 @@ export default function App() {
               
               <div className="w-full max-w-sm space-y-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <input
+                  id="input-phone"
+                  ref={phoneInputRef}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-center text-lg font-semibold text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400"
@@ -507,6 +638,7 @@ export default function App() {
                   placeholder="Enter Mobile Number"
                 />
                 <button
+                  id="btn-start-session"
                   onClick={doLogin}
                   disabled={busy || !phone}
                   className="btn-primary w-full py-3.5 text-base shadow-lg shadow-[#4d7c0f]/20 disabled:opacity-50"
@@ -549,10 +681,10 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-14">
-                <DocumentUploadCard title="Aadhaar" status={documents.aadhaar ? "uploaded" : "missing"} onPickFile={(file) => handleUpload("aadhaar", file)} />
-                <DocumentUploadCard title="Income Certificate" status={documents.income_certificate ? "uploaded" : "missing"} onPickFile={(file) => handleUpload("income_certificate", file)} />
-                <DocumentUploadCard title="Marks Card" status={documents.marks_card ? "uploaded" : "missing"} onPickFile={(file) => handleUpload("marks_card", file)} />
-                <DocumentUploadCard title="Bank Passbook" status={documents.bank_passbook ? "uploaded" : "missing"} onPickFile={(file) => handleUpload("bank_passbook", file)} />
+                <DocumentUploadCard id="btn-upload-aadhaar" highlighted={pendingUpload === "aadhaar"} title="Aadhaar" status={documents.aadhaar ? "uploaded" : "missing"} onPickFile={(file) => { setPendingUpload(null); handleUpload("aadhaar", file); }} />
+                <DocumentUploadCard id="btn-upload-income" highlighted={pendingUpload === "income_certificate"} title="Income Certificate" status={documents.income_certificate ? "uploaded" : "missing"} onPickFile={(file) => { setPendingUpload(null); handleUpload("income_certificate", file); }} />
+                <DocumentUploadCard id="btn-upload-marks" highlighted={pendingUpload === "marks_card"} title="Marks Card" status={documents.marks_card ? "uploaded" : "missing"} onPickFile={(file) => { setPendingUpload(null); handleUpload("marks_card", file); }} />
+                <DocumentUploadCard id="btn-upload-passbook" highlighted={pendingUpload === "bank_passbook"} title="Bank Passbook" status={documents.bank_passbook ? "uploaded" : "missing"} onPickFile={(file) => { setPendingUpload(null); handleUpload("bank_passbook", file); }} />
               </div>
 
               {lastOcr && (
@@ -565,12 +697,14 @@ export default function App() {
 
               <div className="pl-14 pt-4 flex gap-3">
                 <button
+                  id="btn-refresh"
                   onClick={refreshLocker}
                   className="btn-secondary px-6 py-3"
                 >
                   Refresh
                 </button>
                 <button
+                  id="btn-check-eligibility"
                   onClick={loadEligibility}
                   disabled={busy}
                   className="btn-primary px-6 py-3 shadow-lg shadow-[#4d7c0f]/20 disabled:opacity-50"
@@ -598,6 +732,15 @@ export default function App() {
                   selectedIds={selectedCompareIds}
                   onToggleSelect={(id) => setSelectedCompareIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))}
                   onStartApply={async (scheme) => {
+                    // First eligible scheme opens in embedded iframe
+                    const results = eligibility?.results || [];
+                    const firstEligible = results.find(r => r.status === "eligible" || r.status === "needs_documents");
+                    if (firstEligible && scheme.id === firstEligible.scheme.id) {
+                      setActiveScheme(scheme);
+                      setIframeUrl("https://reunite-obstacle-enzyme.ngrok-free.dev/login");
+                      return;
+                    }
+                    // Other schemes use the normal apply flow
                     setActiveScheme(scheme);
                     try {
                       const docs = locker?.documents || {};
@@ -671,6 +814,42 @@ export default function App() {
         <ReasoningPanel activeScheme={activeScheme} confidenceMap={locker?.verification} lastOcr={lastOcr} />
       </div>
 
+      {/* Embedded iframe overlay */}
+      {iframeUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="relative w-[90vw] h-[80vh] max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col">
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-900 text-white">
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                </div>
+                <span className="text-xs font-semibold text-slate-300 truncate max-w-md">
+                  {activeScheme?.name || "Scholarship Portal"} — Apply Now
+                </span>
+              </div>
+              <button
+                id="btn-close-iframe"
+                onClick={() => setIframeUrl(null)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                Close
+              </button>
+            </div>
+            {/* Iframe */}
+            <iframe
+              src={iframeUrl}
+              className="flex-1 w-full border-0"
+              title="Scholarship Portal"
+              allow="camera; microphone; clipboard-write"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Bottom Panel */}
       <div className="col-span-1 md:col-span-12 border-t border-slate-200 bg-white p-3 md:p-4 z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
         {(assistantBusy || assistantReply) && (
@@ -679,9 +858,12 @@ export default function App() {
           </div>
         )}
         <PromptInputArea 
+          voiceTranscript={voiceTranscript}
           onSend={sendAssistantPrompt}
-          onVoice={() => alert("Listening...")}
+          onVoice={toggleHandsfree}
           onUpload={() => setView("upload")}
+          voiceActive={handsfreeEnabled}
+          voiceDisabled={!handsfreeReady}
         />
       </div>
     </div>

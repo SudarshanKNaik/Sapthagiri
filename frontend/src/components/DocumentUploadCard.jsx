@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 
 // Large tappable upload tile for low-digital-literacy UX.
-export default function DocumentUploadCard({ title, subtitle, status = "missing", onPickFile }) {
+export default function DocumentUploadCard({ id, highlighted = false, title, subtitle, status = "missing", onPickFile }) {
   const inputRef = useRef(null);
 
   const statusStyles = {
@@ -23,9 +23,18 @@ export default function DocumentUploadCard({ title, subtitle, status = "missing"
   }
 
   return (
-    <div className={`card-tile border-2 min-h-[220px] transition-all ${statusStyles[status] || statusStyles.missing}`}>
+    <div className={`card-tile border-2 min-h-[220px] transition-all ${
+      highlighted
+        ? "border-indigo-500 bg-indigo-50 shadow-[0_0_0_4px_rgba(99,102,241,0.35)] animate-pulse"
+        : statusStyles[status] || statusStyles.missing
+    }`}>
       <div className="flex-1 flex flex-col items-center justify-center gap-4 mt-2">
         <h3 className="text-base font-bold text-gray-900 leading-tight">{title}</h3>
+        {highlighted && (
+          <div className="text-xs font-bold text-indigo-600 animate-bounce">
+            👆 Tap to Upload!
+          </div>
+        )}
         {subtitle && <div className="mt-0.5 text-xs text-gray-500">{subtitle}</div>}
       </div>
 
@@ -34,15 +43,18 @@ export default function DocumentUploadCard({ title, subtitle, status = "missing"
           {statusText[status] || status}
         </div>
         <button
+          id={id}
           type="button"
           className={`w-full px-4 py-2 text-sm font-bold transition-all ${
-            status === "uploaded" 
-              ? "btn-outline-dark bg-white" 
-              : "btn-primary"
+            highlighted
+              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105"
+              : status === "uploaded"
+                ? "btn-outline-dark bg-white"
+                : "btn-primary"
           }`}
           onClick={() => inputRef.current?.click()}
         >
-          {status === "uploaded" ? "Replace photo" : "Upload photo"}
+          {highlighted ? "📁 Tap Here to Upload" : status === "uploaded" ? "Replace photo" : "Upload photo"}
         </button>
       </div>
 
