@@ -452,48 +452,44 @@ app.post("/api/assistant", async (req, res) => {
   const { prompt, sessionId } = req.body;
   if (!prompt) return res.status(400).json({ error: "Missing prompt" });
 
-  const apiKey = (process.env.GROK_API_KEY || "").trim();
-  if (!apiKey) {
-    return res.json({ reply: "I'm sorry, Grok is not configured. Please check the GROK_API_KEY in the backend .env file." });
+  // Build rich context from user's locker data
+  const lockerDb = readJson(LOCKER_PATH, { users: {} });
+  const locker = lockerDb.users[sessionId] || {};
+  const profile = locker.profile || {};
+  const docs = locker.documents || {};
+  const verification = locker.verification || {};
+
+  const systemPrompt = `You are SAHAYAK AI, a highly advanced scholarship assistant for students in Karnataka, India.
+Here is the student's verified profile from their uploaded documents:
+- Name: ${profile.name || "Not provided"}
+- Date of Birth: ${profile.dob || "Not provided"}
+- Marks/Percentage: ${profile.marks || "Not provided"}
+- Annual Family Income: ₹${profile.income || "Not provided"}
+- Bank Account: ${profile.accountNumber || "Not provided"}
+- IFSC: ${profile.ifsc || "Not provided"}
+- Documents Uploaded: ${Object.keys(docs).filter(k => docs[k]).join(", ") || "None"}
+- OCR Confidence: ${JSON.stringify(verification)}
+
+Use this real data to answer questions about their eligibility. Be concise, empathetic, and professional. If they ask about percentage, calculate it from their marks. If they ask about eligibility, cross-reference their income and marks with Karnataka scholarship criteria.`;
+
+  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  if (!apiKey || !genAI) {
+    return res.status(500).json({ error: "Google Gemini API key not configured. Please set GEMINI_API_KEY in .env" });
   }
 
   try {
-    // Fetch user context for better answers
-    const lockerDb = readJson(LOCKER_PATH, { users: {} });
-    const locker = lockerDb.users[sessionId] || {};
-    const profile = JSON.stringify(locker.profile || {});
-
-    const systemPrompt = `You are SAHAYAK AI, a helpful scholarship assistant for students in Karnataka, India. 
-    Use the following user profile context if available: ${profile}.
-    Be concise, empathetic, and professional. If the user asks about eligibility, remind them to upload their documents for a 100% accurate check.`;
-
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: process.env.GROK_MODEL || "grok-2",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.1
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Grok Full Error:", errorText);
-      throw new Error(`Grok API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    res.json({ reply: data.choices[0].message.content });
+    // Using gemini-3.1-pro-preview for maximum context window and reasoning (2026 standard)
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
+    const result = await model.generateContent([
+      { text: systemPrompt },
+      { text: prompt }
+    ]);
+    
+    const response = await result.response;
+    res.json({ reply: response.text() });
   } catch (e) {
-    console.error("Grok Error:", e);
-    res.status(500).json({ error: "Grok Assistant failed to respond" });
+    console.error("Gemini API Error:", e.message);
+    res.status(500).json({ error: "Gemini AI encountered an error: " + e.message });
   }
 });
 
