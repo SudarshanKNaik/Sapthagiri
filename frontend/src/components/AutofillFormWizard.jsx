@@ -141,23 +141,23 @@ export default function AutofillFormWizard({ sessionId, language, initialProfile
     <div className="space-y-3">
       <ReadinessProgressMeter percent={readiness} />
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-left">
+      <div className="card p-6 text-left">
         <div className="text-xs font-semibold text-slate-500">Confidence colors</div>
         <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
-          <span className="rounded-full border border-green-500 bg-white px-3 py-1 text-green-700">Green: verified</span>
-          <span className="rounded-full border border-amber-400 bg-white px-3 py-1 text-amber-700">Yellow: check</span>
-          <span className="rounded-full border border-red-400 bg-white px-3 py-1 text-red-700">Red: missing/low</span>
+          <span className="badge badge-lime">Green: verified</span>
+          <span className="badge bg-amber-50 text-amber-700 border border-amber-200">Yellow: check</span>
+          <span className="badge bg-red-50 text-red-700 border border-red-200">Red: missing/low</span>
         </div>
         <button
           type="button"
-          className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900"
+          className="mt-4 btn-secondary w-full py-3"
           onClick={speakSection}
         >
           Read this section
         </button>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-left">
+      <div className="card p-6 text-left">
         <div className="text-xs font-semibold text-slate-500">Section</div>
         <div className="mt-1 text-xl font-bold text-slate-900">{current.title}</div>
         <div className="mt-1 text-sm text-slate-600">Step {step + 1} of {sections.length}</div>
@@ -181,7 +181,7 @@ export default function AutofillFormWizard({ sessionId, language, initialProfile
       <VoiceAssistantController language={language} onCommand={handleVoiceCommand} />
 
       {correctionMode ? (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-left">
+        <div className="card border-amber-300 bg-amber-50 p-6 text-left">
           <div className="text-sm font-semibold text-amber-900">Say the new value now</div>
           <div className="mt-1 text-xs text-amber-800">Field: {activeField}</div>
         </div>
@@ -190,7 +190,7 @@ export default function AutofillFormWizard({ sessionId, language, initialProfile
       <div className="flex gap-2">
         <button
           type="button"
-          className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-4 text-base font-semibold text-slate-900 disabled:opacity-50"
+          className="flex-1 btn-secondary py-4 disabled:opacity-50"
           disabled={step === 0}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
         >
@@ -199,7 +199,7 @@ export default function AutofillFormWizard({ sessionId, language, initialProfile
         {step < sections.length - 1 ? (
           <button
             type="button"
-            className="flex-1 rounded-xl bg-slate-900 px-4 py-4 text-base font-semibold text-white"
+            className="flex-1 btn-primary py-4"
             onClick={() => setStep((s) => Math.min(sections.length - 1, s + 1))}
           >
             Next
@@ -207,7 +207,7 @@ export default function AutofillFormWizard({ sessionId, language, initialProfile
         ) : (
           <button
             type="button"
-            className="flex-1 rounded-xl bg-slate-900 px-4 py-4 text-base font-semibold text-white disabled:opacity-50"
+            className="flex-1 btn-primary py-4 disabled:opacity-50"
             disabled={readiness < 80}
             onClick={() => onSubmit?.(form)}
           >

@@ -4,13 +4,13 @@ export default function ScholarshipComparisonTable({ schemes = [] }) {
   if (!schemes.length) return null;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+    <div className="overflow-x-auto card">
       <table className="min-w-full text-left text-sm">
-        <thead className="bg-slate-50">
+        <thead className="bg-[var(--bg-warm)]">
           <tr>
             <th className="px-4 py-3 font-semibold text-slate-700">Field</th>
             {schemes.map((s) => (
-              <th key={s.id} className="px-4 py-3 font-semibold text-slate-900">{s.name}</th>
+              <th key={s.id} className="px-4 py-3 font-semibold text-gray-900">{s.name}</th>
             ))}
           </tr>
         </thead>

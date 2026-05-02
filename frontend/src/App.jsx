@@ -401,11 +401,11 @@ export default function App() {
   const hasPendingUpload = !!locker?.documentsPending?.pending;
 
   return (
-    <div className="h-screen w-screen grid grid-cols-1 md:grid-cols-12 grid-rows-[1fr_auto] bg-slate-50 text-slate-900 overflow-hidden font-sans">
+    <div className="app-window grid grid-cols-1 md:grid-cols-12 grid-rows-[1fr_auto]">
       {/* Left Panel */}
       <div className="hidden md:flex md:flex-col md:col-span-3 lg:col-span-2 border-r border-slate-200 bg-white p-5 overflow-y-auto">
         <div className="mb-8">
-          <div className="text-2xl font-extrabold text-indigo-600 tracking-tight">{t(language, "appName")}</div>
+          <div className="text-2xl font-extrabold text-gray-900 tracking-tight">{t(language, "appName")}</div>
           <div className="text-sm font-medium text-slate-500 mt-1">{t(language, "tagline")}</div>
         </div>
 
@@ -423,7 +423,7 @@ export default function App() {
                   localStorage.clear();
                   window.location.reload();
                 }}
-                className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 transition-colors"
+                className="btn-outline-dark text-[10px] px-2 py-1"
               >
                 Logout / Reset
               </button>
@@ -468,7 +468,7 @@ export default function App() {
         </div>
         
         <div className="pt-6 mt-auto border-t border-slate-100">
-          <button onClick={async () => { await loadHistory(); setView("history"); }} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 transition-colors shadow-sm flex items-center justify-center gap-2">
+          <button onClick={async () => { await loadHistory(); setView("history"); }} className="btn-primary w-full py-3 text-sm flex gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
             View History
           </button>
@@ -493,9 +493,6 @@ export default function App() {
           
           {view === "login" && (
             <div className="flex flex-col items-center justify-center text-center space-y-6 -mt-24">
-              <div className="h-16 w-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-                <span className="text-2xl text-white">✨</span>
-              </div>
               <div>
                 <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">How can I help you today?</h1>
                 <p className="text-slate-500 mt-2 max-w-sm mx-auto">Enter your phone number to login and start matching with scholarships automatically.</p>
@@ -512,7 +509,7 @@ export default function App() {
                 <button
                   onClick={doLogin}
                   disabled={busy || !phone}
-                  className="w-full rounded-xl bg-indigo-600 px-4 py-3.5 text-base font-bold text-white hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-[0_4px_14px_rgba(79,70,229,0.3)]"
+                  className="btn-primary w-full py-3.5 text-base shadow-lg shadow-[#4d7c0f]/20 disabled:opacity-50"
                 >
                   {busy ? "Connecting..." : "Start Session"}
                 </button>
@@ -527,7 +524,7 @@ export default function App() {
                 {LANGS.map((l) => (
                   <button
                     key={l.code}
-                    className={`rounded-xl border-2 px-4 py-4 text-center text-base font-bold transition-all ${language === l.code ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-slate-100 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"}`}
+                    className={`btn-secondary w-full py-4 ${language === l.code ? "border-[var(--border-dark)] bg-gray-50" : ""}`}
                     onClick={async () => {
                       await saveLanguage(l.code);
                       setView("upload");
@@ -543,7 +540,7 @@ export default function App() {
           {view === "upload" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-start gap-4">
-                <div className="h-10 w-10 shrink-0 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/20">AI</div>
+                <div className="h-10 w-10 shrink-0 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-slate-900/20">AI</div>
                 <div className="flex-1 space-y-2">
                   <div className="rounded-2xl rounded-tl-sm bg-slate-100 p-4 text-slate-800 text-sm leading-relaxed shadow-sm">
                     Let's gather your documents. I'll automatically read them and fill out the forms for you. What would you like to upload first?
@@ -569,14 +566,14 @@ export default function App() {
               <div className="pl-14 pt-4 flex gap-3">
                 <button
                   onClick={refreshLocker}
-                  className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                  className="btn-secondary px-6 py-3"
                 >
                   Refresh
                 </button>
                 <button
                   onClick={loadEligibility}
                   disabled={busy}
-                  className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(79,70,229,0.3)] hover:bg-indigo-700 transition-all disabled:opacity-50"
+                  className="btn-primary px-6 py-3 shadow-lg shadow-[#4d7c0f]/20 disabled:opacity-50"
                 >
                   {busy ? "Thinking..." : "Check Eligibility Matches"}
                 </button>
@@ -587,7 +584,7 @@ export default function App() {
           {view === "eligibility" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-start gap-4">
-                <div className="h-10 w-10 shrink-0 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/20">AI</div>
+                <div className="h-10 w-10 shrink-0 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-slate-900/20">AI</div>
                 <div className="flex-1 space-y-2">
                   <div className="rounded-2xl rounded-tl-sm bg-slate-100 p-4 text-slate-800 text-sm leading-relaxed shadow-sm">
                     Based on your profile, I found these matching scholarships. I recommend the ones marked in orange!
@@ -615,7 +612,7 @@ export default function App() {
                 <button
                   disabled={selectedCompareIds.length < 2}
                   onClick={() => setView("compare")}
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 disabled:opacity-50"
+                  className="btn-secondary w-full py-3 disabled:opacity-50"
                 >
                   Compare Selected
                 </button>
@@ -625,7 +622,7 @@ export default function App() {
 
           {view === "compare" && (
              <div className="space-y-4 animate-in fade-in duration-500">
-               <button onClick={() => setView("eligibility")} className="mb-4 flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-2 font-bold text-slate-700 hover:bg-slate-50 transition-all">
+               <button onClick={() => setView("eligibility")} className="btn-outline-dark mb-4 px-4 py-2">
                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                  </svg>
@@ -638,7 +635,7 @@ export default function App() {
           {view === "apply" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                <div className="flex items-start gap-4">
-                <div className="h-10 w-10 shrink-0 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/20">AI</div>
+                <div className="h-10 w-10 shrink-0 bg-slate-900 rounded-full flex items-center justify-center text-white font-bold shadow-md shadow-slate-900/20">AI</div>
                 <div className="flex-1 space-y-2">
                   <div className="rounded-2xl rounded-tl-sm bg-slate-100 p-4 text-slate-800 text-sm leading-relaxed shadow-sm">
                     I've auto-filled the application for {activeScheme?.name}. Please verify the fields below. Green means I'm highly confident in the data.
@@ -663,7 +660,7 @@ export default function App() {
           {view === "history" && (
             <div className="space-y-4 animate-in fade-in duration-500">
               <ApplicationHistoryPanel history={history} />
-              <button onClick={() => setView("upload")} className="rounded-xl border-2 border-slate-200 px-4 py-2 font-bold text-slate-700">Back to Dashboard</button>
+              <button onClick={() => setView("upload")} className="btn-secondary px-4 py-2">Back to Dashboard</button>
             </div>
           )}
         </div>

@@ -9,7 +9,7 @@ export default function ReasoningPanel({ activeScheme, confidenceMap, lastOcr })
       {/* Panel Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2.5 mb-2">
-          <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-600/20">
+          <div className="h-8 w-8 rounded-lg bg-[var(--accent)] flex items-center justify-center shadow-md">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4Z"/>
               <circle cx="12" cy="15" r="2"/>
@@ -61,22 +61,22 @@ export default function ReasoningPanel({ activeScheme, confidenceMap, lastOcr })
       {hasOcrData && (
         <div className="mb-5">
           <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Confidence Breakdown</h4>
-          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm space-y-3">
+          <div className="card p-4 space-y-3">
             {Object.entries(lastOcr.confidence || {})
               .filter(([_, val]) => Number(val) > 0)
               .sort(([, a], [, b]) => Number(b) - Number(a))
               .map(([key, val]) => {
                 const score = Number(val);
-                let barColor = "bg-ai-conf-high";
-                let badgeColor = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                let barColor = "bg-[var(--lime-text)]";
+                let badgeColor = "badge badge-lime text-[9px]";
                 let label = "High";
                 if (score < 60) {
-                  barColor = "bg-ai-conf-low";
-                  badgeColor = "bg-rose-50 text-rose-700 border-rose-200";
+                  barColor = "bg-red-400";
+                  badgeColor = "badge bg-red-50 text-red-700 border-red-200 text-[9px]";
                   label = "Low";
                 } else if (score < 90) {
-                  barColor = "bg-ai-conf-med";
-                  badgeColor = "bg-amber-50 text-amber-700 border-amber-200";
+                  barColor = "bg-amber-400";
+                  badgeColor = "badge bg-amber-50 text-amber-700 border-amber-200 text-[9px]";
                   label = "Medium";
                 }
 
@@ -84,7 +84,7 @@ export default function ReasoningPanel({ activeScheme, confidenceMap, lastOcr })
                   <div key={key}>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[11px] font-semibold text-slate-600 capitalize">{key.replace(/_/g, " ")}</span>
-                      <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${badgeColor}`}>
+                      <span className={badgeColor}>
                         {label} · {score.toFixed(0)}%
                       </span>
                     </div>
@@ -105,7 +105,7 @@ export default function ReasoningPanel({ activeScheme, confidenceMap, lastOcr })
       {lastOcr?.extracted && Object.keys(lastOcr.extracted).length > 0 && (
         <div className="mb-5">
           <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Extracted Fields</h4>
-          <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
+          <div className="card p-3">
             <div className="space-y-1.5">
               {Object.entries(lastOcr.extracted).slice(0, 8).map(([key, val]) => (
                 <div key={key} className="flex items-center justify-between py-1 px-1 rounded-md hover:bg-slate-50 transition-colors">
@@ -122,14 +122,14 @@ export default function ReasoningPanel({ activeScheme, confidenceMap, lastOcr })
       {hasScheme && (
         <div className="mb-5">
           <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Eligibility Match</h4>
-          <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm">
+          <div className="card border-[var(--lime-strong)] bg-[var(--lime)] p-4">
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-5 w-5 rounded-full bg-indigo-600 flex items-center justify-center">
+              <div className="h-5 w-5 rounded-full bg-[var(--accent)] flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 6 9 17l-5-5"/>
                 </svg>
               </div>
-              <span className="text-xs font-bold text-indigo-800">{activeScheme.name}</span>
+              <span className="text-xs font-bold text-gray-900">{activeScheme.name}</span>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center py-1.5 border-b border-indigo-100/60">
@@ -151,17 +151,6 @@ export default function ReasoningPanel({ activeScheme, confidenceMap, lastOcr })
         </div>
       )}
 
-      {/* Tech Stack Footer */}
-      <div className="mt-auto pt-4 border-t border-slate-100">
-        <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-2.5">Powered By</h4>
-        <div className="flex flex-wrap gap-1.5">
-          {["Tesseract OCR", "Grok AI", "Rule Engine"].map((tech) => (
-            <span key={tech} className="rounded-md bg-slate-100 px-2 py-1 text-[9px] font-bold text-slate-500 border border-slate-50">
-              {tech}
-            </span>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

@@ -6,7 +6,7 @@ export const LANGS = [
 
 const STRINGS = {
   en: {
-    appName: "SAHAYAK AI",
+    appName: "SETU AI",
     tagline: "Scholarship helper for everyone",
     loginTitle: "Login",
     phoneLabel: "Mobile number (optional)",

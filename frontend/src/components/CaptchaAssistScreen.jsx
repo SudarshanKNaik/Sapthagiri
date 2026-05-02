@@ -16,14 +16,14 @@ export default function CaptchaAssistScreen({ onDone }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-left">
+      <div className="card p-6 text-left">
         <div className="text-xl font-bold text-slate-900">CAPTCHA help</div>
         <div className="mt-2 text-slate-700">
           This step needs a human. Please fill the CAPTCHA on the portal.
         </div>
         <button
           type="button"
-          className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-4 text-base font-semibold text-slate-900"
+          className="mt-4 w-full btn-secondary py-4"
           onClick={speak}
         >
           Listen
@@ -31,7 +31,7 @@ export default function CaptchaAssistScreen({ onDone }) {
       </div>
       <button
         type="button"
-        className="w-full rounded-xl bg-slate-900 px-4 py-4 text-base font-semibold text-white"
+        className="btn-primary w-full py-4 text-base"
         onClick={onDone}
       >
         I completed CAPTCHA
