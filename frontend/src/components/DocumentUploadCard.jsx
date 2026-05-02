@@ -5,8 +5,8 @@ export default function DocumentUploadCard({ title, subtitle, status = "missing"
   const inputRef = useRef(null);
 
   const statusStyles = {
-    missing: "border-slate-200 bg-white border-dashed hover:border-indigo-400 hover:bg-slate-50",
-    uploaded: "border-indigo-200 bg-indigo-50",
+    missing: "border-[var(--border)] bg-white hover:border-[var(--border-dark)]",
+    uploaded: "border-[var(--lime-strong)] bg-[var(--lime)]",
     warning: "border-amber-200 bg-amber-50",
   };
 
@@ -17,34 +17,34 @@ export default function DocumentUploadCard({ title, subtitle, status = "missing"
   };
 
   const badgeStyles = {
-    missing: "bg-slate-100 text-slate-500",
-    uploaded: "bg-indigo-100 text-indigo-700",
-    warning: "bg-amber-100 text-amber-700",
+    missing: "badge badge-outline",
+    uploaded: "badge badge-lime",
+    warning: "badge bg-amber-100 text-amber-700",
   }
 
   return (
-    <div className={`rounded-xl border-2 p-5 text-left transition-all ${statusStyles[status] || statusStyles.missing}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className={`text-base font-bold ${status === 'uploaded' ? 'text-indigo-900' : 'text-slate-800'}`}>{title}</div>
-          {subtitle ? <div className="mt-0.5 text-xs text-slate-500">{subtitle}</div> : null}
-        </div>
-        <div className={`rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${badgeStyles[status] || badgeStyles.missing}`}>
-          {statusText[status] || status}
-        </div>
+    <div className={`card-tile border-2 min-h-[220px] transition-all ${statusStyles[status] || statusStyles.missing}`}>
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 mt-2">
+        <h3 className="text-base font-bold text-gray-900 leading-tight">{title}</h3>
+        {subtitle && <div className="mt-0.5 text-xs text-gray-500">{subtitle}</div>}
       </div>
 
-      <button
-        type="button"
-        className={`mt-6 w-full rounded-lg px-4 py-3 text-sm font-bold transition-all ${
-          status === "uploaded" 
-            ? "bg-white border-2 border-indigo-100 text-indigo-600 shadow-sm hover:border-indigo-200" 
-            : "bg-slate-900 text-white shadow-sm hover:bg-slate-800"
-        }`}
-        onClick={() => inputRef.current?.click()}
-      >
-        {status === "uploaded" ? "Replace photo" : "Upload photo"}
-      </button>
+      <div className="mt-auto pt-4 w-full flex flex-col items-center justify-center gap-3">
+        <div className={badgeStyles[status] || badgeStyles.missing}>
+          {statusText[status] || status}
+        </div>
+        <button
+          type="button"
+          className={`w-full px-4 py-2 text-sm font-bold transition-all ${
+            status === "uploaded" 
+              ? "btn-outline-dark bg-white" 
+              : "btn-primary"
+          }`}
+          onClick={() => inputRef.current?.click()}
+        >
+          {status === "uploaded" ? "Replace photo" : "Upload photo"}
+        </button>
+      </div>
 
       <input
         ref={inputRef}
