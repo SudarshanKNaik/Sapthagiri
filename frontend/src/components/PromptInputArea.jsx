@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function PromptInputArea({ onSend, onVoice, onUpload }) {
+export default function PromptInputArea({ onSend, onVoice, onUpload, voiceActive, voiceDisabled, voiceTranscript }) {
   const [text, setText] = useState("");
 
   const handleSend = () => {
@@ -36,16 +36,43 @@ export default function PromptInputArea({ onSend, onVoice, onUpload }) {
         }}
       />
 
-      <button
-        type="button"
-        onClick={onVoice}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"
-        title="Voice assistant"
-      >
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-        </svg>
-      </button>
+      <div className="voice-hub">
+        {voiceActive && (
+          <>
+            <div className="voice-pulse" />
+            {voiceTranscript && (
+              <div className="transcript-bubble">
+                "{voiceTranscript}"
+              </div>
+            )}
+          </>
+        )}
+        <button
+          type="button"
+          onClick={onVoice}
+          className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+            voiceActive 
+              ? "voice-button-active text-white" 
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          } ${voiceDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          title={voiceDisabled ? "Voice control not available" : voiceActive ? "Voice control on" : "Voice control off"}
+          disabled={voiceDisabled}
+        >
+          {voiceActive ? (
+            <div className="sound-waves">
+              <div className="wave-bar" />
+              <div className="wave-bar" />
+              <div className="wave-bar" />
+              <div className="wave-bar" />
+              <div className="wave-bar" />
+            </div>
+          ) : (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          )}
+        </button>
+      </div>
 
       <button
         type="button"

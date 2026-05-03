@@ -5,7 +5,6 @@ const fs = require("fs");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const twilio = require("twilio");
 
 require("dotenv").config();
 
@@ -24,13 +23,8 @@ const {
 
 const PORT = process.env.PORT || 3002;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash-latest";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
-
-const twilioClient = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
-  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
-  : null;
-const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID || "";
 const UPLOAD_DIR = path.resolve(__dirname, "..", "uploads");
 const LOCKER_PATH = path.resolve(__dirname, "..", "data", "locker.json");
 const HISTORY_PATH = path.resolve(__dirname, "..", "data", "history.json");
@@ -104,52 +98,10 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/api/auth/send-otp", async (req, res) => {
-  const phone = (req.body?.phone || "").toString().trim();
-  if (!phone) return res.status(400).json({ error: "Missing phone number" });
-
-  if (twilioClient && verifyServiceSid) {
-    try {
-      const verification = await twilioClient.verify.v2.services(verifyServiceSid)
-        .verifications.create({ to: phone, channel: "sms" });
-      res.json({ ok: true, status: verification.status });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  } else {
-    console.log(`[AUTH] Mock send-otp to ${phone}. Use 123456 to verify.`);
-    res.json({ ok: true, mocked: true });
-  }
-});
-
-app.post("/api/auth/verify-otp", async (req, res) => {
-  const { phone, code } = req.body;
-  if (!phone || !code) return res.status(400).json({ error: "Missing phone or code" });
-
-  if (twilioClient && verifyServiceSid) {
-    try {
-      const check = await twilioClient.verify.v2.services(verifyServiceSid)
-        .verificationChecks.create({ to: phone, code });
-      if (check.status === "approved") {
-        const sessionId = uuidv4();
-        lockerUpsert(sessionId, { phone, language: "en" });
-        res.json({ ok: true, sessionId });
-      } else {
-        res.status(400).json({ error: "Invalid OTP" });
-      }
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  } else {
-    // Mock verification
-    if (code === "123456") {
-      const sessionId = uuidv4();
-      lockerUpsert(sessionId, { phone, language: "en" });
-      res.json({ ok: true, sessionId });
-    } else {
-      res.status(400).json({ error: "Invalid mock OTP. Use 123456." });
-    }
-  }
+app.post("/api/auth/login", (req, res) => {
+  const sessionId = uuidv4();
+  lockerUpsert(sessionId, { phone: (req.body?.phone || "").toString(), language: "en" });
+  res.json({ sessionId });
 });
 
 app.post("/api/language", (req, res) => {
@@ -189,8 +141,8 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
       ocr = await runOcr(filePath, "eng");
     }
 
-    let docTypeDetected = classifyDocument(ocr.text);
-    let issueDate = extractIssueDate(ocr.text);
+    const docTypeDetected = classifyDocument(ocr.text);
+    const issueDate = extractIssueDate(ocr.text);
     const profileFields = extractProfileFields(ocr.text);
 
     const extracted = {
@@ -200,10 +152,6 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
       marks: profileFields.marks.value,
       accountNumber: profileFields.accountNumber.value,
       ifsc: profileFields.ifsc.value,
-      aadhaar: profileFields.aadhaar.value,
-      gender: profileFields.gender.value,
-      state: profileFields.state.value,
-      pincode: profileFields.pincode.value,
     };
 
     const confidence = {
@@ -213,10 +161,6 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
       marks: profileFields.marks.confidence,
       accountNumber: profileFields.accountNumber.confidence,
       ifsc: profileFields.ifsc.confidence,
-      aadhaar: profileFields.aadhaar.confidence,
-      gender: profileFields.gender.confidence,
-      state: profileFields.state.confidence,
-      pincode: profileFields.pincode.confidence,
     };
 
     // expiry detection: default 365 days for certificates (income)
@@ -262,12 +206,11 @@ app.post("/api/ocr/upload", upload.single("file"), async (req, res) => {
           .filter(Boolean);
 
         if (eligibleSchemes.length > 0) {
-          /* SMS DISABLED FOR TESTING
           await sendEligibilitySMS({
             to: phone,
             scholarshipNames: eligibleSchemes.slice(0, 2),
           });
-          */
+
           lockerUpsert(sessionId, { smsFlags: { ...(locker.smsFlags || {}), eligibilitySent: true } });
         }
       }
@@ -418,7 +361,7 @@ app.post("/api/chat", async (req, res) => {
   if (!text) return res.status(400).json({ error: "Missing text" });
 
   try {
-    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
     const prompt = `You are Sahayak AI, a helpful scholarship assistant. Reply concisely and clearly.\n\nUser: ${text}`;
     const result = await model.generateContent(prompt);
     const reply = result?.response?.text?.() || "";
@@ -506,47 +449,28 @@ app.get("/api/history", (req, res) => {
 });
 
 app.post("/api/assistant", async (req, res) => {
+  if (!genAI) return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
   const { prompt, sessionId } = req.body;
   if (!prompt) return res.status(400).json({ error: "Missing prompt" });
 
-  // Build rich context from user's locker data
-  const lockerDb = readJson(LOCKER_PATH, { users: {} });
-  const locker = lockerDb.users[sessionId] || {};
-  const profile = locker.profile || {};
-  const docs = locker.documents || {};
-  const verification = locker.verification || {};
-
-  const systemPrompt = `You are SAHAYAK AI, a highly advanced scholarship assistant for students in Karnataka, India.
-Here is the student's verified profile from their uploaded documents:
-- Name: ${profile.name || "Not provided"}
-- Date of Birth: ${profile.dob || "Not provided"}
-- Marks/Percentage: ${profile.marks || "Not provided"}
-- Annual Family Income: ₹${profile.income || "Not provided"}
-- Bank Account: ${profile.accountNumber || "Not provided"}
-- IFSC: ${profile.ifsc || "Not provided"}
-- Documents Uploaded: ${Object.keys(docs).filter(k => docs[k]).join(", ") || "None"}
-- OCR Confidence: ${JSON.stringify(verification)}
-
-Use this real data to answer questions about their eligibility. Be concise, empathetic, and professional. If they ask about percentage, calculate it from their marks. If they ask about eligibility, cross-reference their income and marks with Karnataka scholarship criteria.`;
-
-  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
-  if (!apiKey || !genAI) {
-    return res.status(500).json({ error: "Google Gemini API key not configured. Please set GEMINI_API_KEY in .env" });
-  }
-
   try {
-    // Using gemini-3.1-pro-preview for maximum context window and reasoning (2026 standard)
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
-    const result = await model.generateContent([
-      { text: systemPrompt },
-      { text: prompt }
-    ]);
-    
-    const response = await result.response;
-    res.json({ reply: response.text() });
+    // Fetch user context for better answers
+    const lockerDb = readJson(LOCKER_PATH, { users: {} });
+    const locker = lockerDb.users[sessionId] || {};
+    const profile = JSON.stringify(locker.profile || {});
+
+    const systemPrompt = `You are SAHAYAK AI, a helpful scholarship assistant for students in Karnataka, India. 
+    Use the following user profile context if available: ${profile}.
+    Be concise, empathetic, and professional. If the user asks about eligibility, remind them to upload their documents for a 100% accurate check.`;
+
+    console.log(`[ASSISTANT] Using model: ${process.env.GEMINI_MODEL || "gemini-2.5-flash"}`);
+    const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-2.5-flash" });
+    const result = await model.generateContent(`${systemPrompt}\n\nUser: ${prompt}`);
+    const reply = result?.response?.text?.() || "";
+    res.json({ reply });
   } catch (e) {
-    console.error("Gemini API Error:", e.message);
-    res.status(500).json({ error: "Gemini AI encountered an error: " + e.message });
+    console.error("Assistant Error:", e);
+    res.status(500).json({ error: "Assistant failed to respond" });
   }
 });
 
@@ -554,4 +478,3 @@ const http = require("http");
 http.createServer(app).listen(PORT, () => {
   console.log(`SAHAYAK AI backend listening on http://localhost:${PORT}`);
 });
-// Nodemon trigger
