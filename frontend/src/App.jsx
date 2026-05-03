@@ -187,113 +187,212 @@ export default function App() {
     if (sessionId) setView("upload");
   }, [sessionId]);
 
-  const sapthagiriModule = useMemo(() => ({
-    name: "Sapthagiri",
-    description: "Sapthagiri App Commands",
-    contexts: [{
-      context: "root",
-      commands: [
-        // ── Mobile number entry ──
-        { 
-          name: "enter mobile number", 
-          action: () => { setVoiceTranscript("enter mobile number"); document.getElementById("input-phone")?.focus(); } 
-        },
-        { 
-          name: "mobile number", 
-          action: () => { setVoiceTranscript("mobile number"); document.getElementById("input-phone")?.focus(); } 
-        },
-        { 
-          name: "my number is", 
-          regexp: /my number is ([\d\s]+)/,
-          action: (match) => {
-            setVoiceTranscript(match[0]);
-            const num = match[1].replace(/\s/g, "");
-            setPhone(num);
-          }
-        },
-        { 
-          name: "set number to", 
-          regexp: /set number to ([\d\s]+)/,
-          action: (match) => {
-            setVoiceTranscript(match[0]);
-            const num = match[1].replace(/\s/g, "");
-            setPhone(num);
-          }
-        },
-        // ── Session ──
-        { name: "start session", action: () => { setVoiceTranscript("start session"); document.getElementById("btn-start-session")?.click(); } },
-        { name: "start", action: () => { setVoiceTranscript("start"); document.getElementById("btn-start-session")?.click(); } },
-        // ── Uploads (highlight card so user taps it — browser blocks async file pickers) ──
-        { name: "aadhaar upload", action: () => { setVoiceTranscript("Say aadhaar upload"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("aadhaar"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
-        { name: "aadhar upload", action: () => { setVoiceTranscript("Tap the glowing Aadhaar card"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("aadhaar"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
-        { name: "income certificate upload", action: () => { setVoiceTranscript("Tap the glowing Income Certificate card"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("income_certificate"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
-        { name: "marks card upload", action: () => { setVoiceTranscript("Tap the glowing Marks Card"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("marks_card"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
-        { name: "bank passbook upload", action: () => { setVoiceTranscript("Tap the glowing Bank Passbook card"); setView("upload"); if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current); setPendingUpload("bank_passbook"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
-        // ── Eligibility & Refresh ──
-        { name: "click check eligibility", action: () => { setVoiceTranscript("click check eligibility"); document.getElementById("btn-check-eligibility")?.click(); } },
-        { name: "check eligibility", action: () => { setVoiceTranscript("check eligibility"); document.getElementById("btn-check-eligibility")?.click(); } },
-        { name: "click refresh", action: () => { setVoiceTranscript("click refresh"); document.getElementById("btn-refresh")?.click(); } },
-        { name: "refresh", action: () => { setVoiceTranscript("refresh"); document.getElementById("btn-refresh")?.click(); } },
-        // ── Logout ──
-        { name: "logout", action: () => { setVoiceTranscript("logout"); document.getElementById("btn-logout")?.click(); } },
-        { name: "reset", action: () => { setVoiceTranscript("reset"); document.getElementById("btn-logout")?.click(); } },
-        // ── Close embedded portal ──
-        { name: "close portal", action: () => { setVoiceTranscript("close portal"); setIframeUrl(null); } },
-        { name: "close", action: () => { setVoiceTranscript("close"); setIframeUrl(null); } },
-        { name: "offline scan", action: () => { setVoiceTranscript("offline scan"); setShowOfflineScan(true); } },
-        { name: "scan form", action: () => { setVoiceTranscript("scan form"); setShowOfflineScan(true); } },
-        { name: "close scan", action: () => { setVoiceTranscript("close scan"); setShowOfflineScan(false); } },
-        // ── Navigation ──
-        { name: "login", action: () => { setVoiceTranscript("login"); setView("login"); } },
-        { name: "dashboard", action: () => { setVoiceTranscript("dashboard"); setView("upload"); } },
-        { name: "upload", action: () => { setVoiceTranscript("upload"); setView("upload"); } },
-        { name: "show history", action: () => { setVoiceTranscript("show history"); loadHistory(); setView("history"); } },
-        { name: "history", action: () => { setVoiceTranscript("history"); loadHistory(); setView("history"); } },
-        { name: "language", action: () => { setVoiceTranscript("language"); setView("language"); } },
-        { name: "english", action: () => { setVoiceTranscript("english"); saveLanguage("en"); } },
-        { name: "kannada", action: () => { setVoiceTranscript("kannada"); saveLanguage("kn"); } },
-        { name: "hindi", action: () => { setVoiceTranscript("hindi"); saveLanguage("hi"); } },
-        { name: "compare", action: () => { setVoiceTranscript("compare"); setView("compare"); } },
-        { name: "submit", action: () => { setVoiceTranscript("submit"); submitApplication(); } },
-        { name: "go back", action: () => { setVoiceTranscript("go back"); setView("upload"); } },
-        {
-          name: "catch-all",
-          regexp: /(.*)/,
-          action: (match) => {
-            setVoiceTranscript(match[1]);
-          }
-        }
-      ]
-    }]
-  }), [loadEligibility, loadHistory, saveLanguage, submitApplication, doLogin, setPhone]);
+  function handleVoiceShortcut(rawText) {
+    const text = String(rawText || "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (!text) return false;
 
-  useEffect(() => {
-    if (handsfreeRef.current) return undefined;
+    const click = (id) => document.getElementById(id)?.click();
+    const focus = (id) => document.getElementById(id)?.focus();
+    const openUploadCard = (docType, spokenText) => {
+      setVoiceTranscript(spokenText);
+      setView("upload");
+      if (pendingUploadTimerRef.current) clearTimeout(pendingUploadTimerRef.current);
+      setPendingUpload(docType);
+      pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000);
+      return true;
+    };
+
+    const mobileMatch = text.match(/(?:my number is|set number to|phone number is|mobile number is)\s+([\d\s]+)/);
+    if (mobileMatch) {
+      setVoiceTranscript(text);
+      setPhone(mobileMatch[1].replace(/\s/g, ""));
+      focus("input-phone");
+      return true;
+    }
+
+    if (text.includes("enter mobile number") || text.includes("mobile number") || text.includes("phone number")) {
+      setVoiceTranscript(text);
+      focus("input-phone");
+      return true;
+    }
+
+    if (text.includes("start session") || text === "start" || text.includes("login")) {
+      setVoiceTranscript(text);
+      click("btn-start-session");
+      return true;
+    }
+
+    if (text.includes("aadhaar upload") || text.includes("aadhar upload")) return openUploadCard("aadhaar", text);
+    if (text.includes("income certificate upload")) return openUploadCard("income_certificate", text);
+    if (text.includes("marks card upload")) return openUploadCard("marks_card", text);
+    if (text.includes("bank passbook upload")) return openUploadCard("bank_passbook", text);
+
+    if (text.includes("check eligibility")) {
+      setVoiceTranscript(text);
+      click("btn-check-eligibility");
+      return true;
+    }
+
+    if (text.includes("refresh")) {
+      setVoiceTranscript(text);
+      click("btn-refresh");
+      return true;
+    }
+
+    if (text.includes("logout") || text.includes("reset")) {
+      setVoiceTranscript(text);
+      click("btn-logout");
+      return true;
+    }
+
+    if (text.includes("close portal") || text === "close") {
+      setVoiceTranscript(text);
+      setIframeUrl(null);
+      return true;
+    }
+
+    if (text.includes("offline scan") || text.includes("scan form")) {
+      setVoiceTranscript(text);
+      setShowOfflineScan(true);
+      return true;
+    }
+
+    if (text.includes("close scan")) {
+      setVoiceTranscript(text);
+      setShowOfflineScan(false);
+      return true;
+    }
+
+    if (text === "dashboard" || text === "upload" || text === "compare" || text === "history" || text === "language") {
+      setVoiceTranscript(text);
+      if (text === "dashboard" || text === "upload") setView("upload");
+      if (text === "compare") setView("compare");
+      if (text === "history") {
+        loadHistory();
+        setView("history");
+      }
+      if (text === "language") setView("language");
+      return true;
+    }
+
+    if (text === "show history") {
+      setVoiceTranscript(text);
+      loadHistory();
+      setView("history");
+      return true;
+    }
+
+    if (text === "english" || text === "kannada" || text === "hindi") {
+      setVoiceTranscript(text);
+      saveLanguage(text === "english" ? "en" : text === "kannada" ? "kn" : "hi");
+      return true;
+    }
+
+    if (text === "submit") {
+      setVoiceTranscript(text);
+      submitApplication();
+      return true;
+    }
+
+    if (text === "go back") {
+      setVoiceTranscript(text);
+      setView("upload");
+      return true;
+    }
+
+    return false;
+  }
+
+  const initializeHandsfree = () => {
+    if (handsfreeRef.current) return true;
     try {
       const handsfreeApi = window.handsfreeForWebsite;
       if (!handsfreeApi) {
         console.warn("Handsfree API not found on window");
-        return;
+        return false;
       }
+      
+      // Custom Sapthagiri module with sapthagiri-specific commands
+      const sapthagiriModule = {
+        name: "Sapthagiri",
+        description: "Sapthagiri scholarship assistant commands",
+        contexts: [{
+          context: "root",
+          commands: [
+            { name: "my number is", regexp: /my number is ([\d\s]+)/, action: (match) => { const num = match[1].replace(/\s/g, ""); setPhone(num); } },
+            { name: "set number to", regexp: /set number to ([\d\s]+)/, action: (match) => { const num = match[1].replace(/\s/g, ""); setPhone(num); } },
+            { name: "aadhaar upload", action: () => { setView("upload"); setPendingUpload("aadhaar"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+            { name: "income certificate upload", action: () => { setView("upload"); setPendingUpload("income_certificate"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+            { name: "marks card upload", action: () => { setView("upload"); setPendingUpload("marks_card"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+            { name: "bank passbook upload", action: () => { setView("upload"); setPendingUpload("bank_passbook"); pendingUploadTimerRef.current = setTimeout(() => setPendingUpload(null), 8000); } },
+            { name: "close portal", action: () => { setIframeUrl(null); } },
+            { name: "offline scan", action: () => { setShowOfflineScan(true); } },
+            { name: "scan form", action: () => { setShowOfflineScan(true); } },
+            { name: "close scan", action: () => { setShowOfflineScan(false); } },
+            { name: "english", action: () => { saveLanguage("en"); } },
+            { name: "kannada", action: () => { saveLanguage("kn"); } },
+            { name: "hindi", action: () => { saveLanguage("hi"); } },
+          ]
+        }]
+      };
+      
       handsfreeRef.current = handsfreeApi.init({
         turnedOn: false,
         continuesRecognition: true,
+        onSpeech: (transcript) => {
+          console.log('Speech recognized:', transcript);
+          setVoiceTranscript(transcript);
+          // Clear transcript after 3 seconds
+          setTimeout(() => setVoiceTranscript(""), 3000);
+        },
+        onStart: () => {
+          console.log('Handsfree started');
+        },
+        onStop: () => {
+          console.log('Handsfree stopped');
+        },
+        onError: (error) => {
+          console.error('Handsfree error:', error);
+        }
       });
+      
+      // Add our custom Sapthagiri module to the default modules
       handsfreeRef.current.addModules([sapthagiriModule]);
+      console.log('Handsfree initialized with modules:', handsfreeRef.current.getModules());
       setHandsfreeReady(true);
+      return true;
     } catch (e) {
       console.error("Handsfree Init Error:", e);
+      setHandsfreeReady(false);
+      return false;
     }
-  }, [sapthagiriModule]);
+  };
 
-  const toggleHandsfree = () => {
-    if (!handsfreeRef.current) return;
-    if (handsfreeEnabled) {
-      handsfreeRef.current.turnOff();
+  useEffect(() => {
+    initializeHandsfree();
+  }, []);
+
+  const toggleHandsfree = async () => {
+    if (!initializeHandsfree()) {
+      setError("Voice input is not available yet. Reload the page and try again.");
+      return;
+    }
+    try {
+      if (handsfreeEnabled) {
+        handsfreeRef.current.turnOff();
+        setHandsfreeEnabled(false);
+      } else {
+        await handsfreeRef.current.turnOn();
+        setHandsfreeEnabled(true);
+      }
+    } catch (error) {
+      console.error('Error toggling handsfree:', error);
+      if (error.name === 'NotAllowedError') {
+        setError("Microphone permission denied. Please allow microphone access and try again.");
+      } else {
+        setError(`Voice input error: ${error.message}`);
+      }
       setHandsfreeEnabled(false);
-    } else {
-      handsfreeRef.current.turnOn();
-      setHandsfreeEnabled(true);
     }
   };
 
@@ -884,7 +983,7 @@ export default function App() {
           onVoice={toggleHandsfree}
           onUpload={() => setView("upload")}
           voiceActive={handsfreeEnabled}
-          voiceDisabled={!handsfreeReady}
+          voiceDisabled={false}
         />
       </div>
     </div>
