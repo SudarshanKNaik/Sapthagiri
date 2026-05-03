@@ -71,7 +71,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fb' }}>
+    <div className="page-bg">
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
@@ -111,15 +111,11 @@ export default function Dashboard() {
       {/* Welcome Card */}
       <section className="container-section">
         <div className="container">
-          <div className="card" style={{ 
-            background: 'linear-gradient(135deg, #e8f0fd 0%, #f0f7ff 100%)',
-            borderLeft: '4px solid #1e60d4',
-            marginBottom: '2rem'
-          }}>
+          <div className="card accent-border-left" style={{ marginBottom: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
               <div>
-                <h2 style={{ color: '#0b3d91', fontSize: '1.75rem', marginBottom: '0.5rem' }}>Welcome back! 👋</h2>
-                <p style={{ color: '#1e60d4', marginBottom: '0.5rem', fontSize: '1rem' }}>
+                <h2 style={{ color: 'var(--primary-blue-dark)', fontSize: '1.75rem', marginBottom: '0.5rem' }}>Welcome back! 👋</h2>
+                <p style={{ color: 'var(--primary-blue-main)', marginBottom: '0.5rem', fontSize: '1rem' }}>
                   <strong>Registered Mobile:</strong> +91 {userMobile}
                 </p>
                 <p style={{ color: '#555555' }}>
@@ -132,8 +128,8 @@ export default function Dashboard() {
 
           {/* Section Title */}
           <div style={{ marginBottom: '2rem' }}>
-            <h2 style={{ color: '#0b3d91', fontSize: '2rem', marginBottom: '0.5rem' }}>Available Welfare Schemes</h2>
-            <p style={{ color: '#555555', fontSize: '1rem' }}>Select a scheme to view details and apply online</p>
+            <h2 style={{ color: 'var(--primary-blue-dark)', fontSize: '2rem', marginBottom: '0.5rem' }}>Available Welfare Schemes</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>Select a scheme to view details and apply online</p>
           </div>
 
           {/* Schemes Grid */}
@@ -171,30 +167,30 @@ export default function Dashboard() {
             }}>
               <div className="card">
                 <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📱</div>
-                <h3 style={{ color: '#0b3d91', marginBottom: '0.75rem' }}>Easy to Use</h3>
+                <h3 style={{ color: 'var(--primary-blue-dark)', marginBottom: '0.75rem' }}>Easy to Use</h3>
                 <p>Simple, step-by-step application process. No complicated forms or confusing requirements.</p>
               </div>
               <div className="card">
                 <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔒</div>
-                <h3 style={{ color: '#0b3d91', marginBottom: '0.75rem' }}>Secure & Private</h3>
+                <h3 style={{ color: 'var(--primary-blue-dark)', marginBottom: '0.75rem' }}>Secure & Private</h3>
                 <p>Your data is encrypted and secure. We never share your information without permission.</p>
               </div>
               <div className="card">
                 <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚡</div>
-                <h3 style={{ color: '#0b3d91', marginBottom: '0.75rem' }}>Fast Processing</h3>
+                <h3 style={{ color: 'var(--primary-blue-dark)', marginBottom: '0.75rem' }}>Fast Processing</h3>
                 <p>Quick verification and approval. Most applications are processed within 5-10 working days.</p>
               </div>
             </div>
           </section>
 
           {/* Support Section */}
-          <section style={{ marginTop: '3rem', padding: '2rem', background: 'linear-gradient(135deg, #e8f0fd 0%, #f0f7ff 100%)', borderRadius: '10px', textAlign: 'center' }}>
-            <h3 style={{ color: '#0b3d91', marginBottom: '0.75rem' }}>Need Help?</h3>
-            <p style={{ color: '#555555', marginBottom: '1rem' }}>Our support team is available 24/7 to assist you</p>
+          <section className="card" style={{ marginTop: '3rem', padding: '2rem', borderRadius: '12px', textAlign: 'center' }}>
+            <h3 style={{ color: 'var(--primary-blue-dark)', marginBottom: '0.75rem' }}>Need Help?</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>Our support team is available 24/7 to assist you</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              <a href="tel:18001234567" style={{ color: '#1e60d4', fontWeight: 600 }}>📞 1-800-WELFARE</a>
+              <a href="tel:18001234567" style={{ color: 'var(--primary-blue-main)', fontWeight: 600 }}>📞 1-800-WELFARE</a>
               <span style={{ color: '#ddd' }}>•</span>
-              <a href="mailto:support@welfare.gov" style={{ color: '#1e60d4', fontWeight: 600 }}>✉️ support@welfare.gov</a>
+              <a href="mailto:support@welfare.gov" style={{ color: 'var(--primary-blue-main)', fontWeight: 600 }}>✉️ support@welfare.gov</a>
             </div>
           </section>
         </div>

@@ -1,4 +1,11 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+	allowedDevOrigins: [
+		'localhost',
+		'127.0.0.1',
+		'reunite-obstacle-enzyme.ngrok-free.dev',
+		'*.ngrok-free.dev',
+	],
+};
 
-export default nextConfig;
+module.exports = nextConfig;

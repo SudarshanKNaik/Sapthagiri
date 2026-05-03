@@ -47,7 +47,7 @@ Phone: 1800-GOV-HELP (1800-468-4357)
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fb' }}>
+    <div className="page-bg">
       {/* Header Navigation */}
       <header className="header-nav">
         <div className="header-nav-container">
@@ -55,15 +55,10 @@ Phone: 1800-GOV-HELP (1800-468-4357)
         </div>
       </header>
 
-      {/* Success Banner */}
-      <section style={{
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-        color: 'white',
-        padding: '3rem 1.5rem',
-        textAlign: 'center'
-      }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅ Success!</h1>
-        <p style={{ opacity: 0.95, fontSize: '1rem' }}>Your application has been submitted successfully</p>
+      <section className="page-hero">
+        <div className="hero-icon">✅</div>
+        <h1>Success!</h1>
+        <p>Your application has been submitted successfully</p>
       </section>
 
       {/* Success Message */}
@@ -71,15 +66,13 @@ Phone: 1800-GOV-HELP (1800-468-4357)
         <div className="card" style={{
           maxWidth: '750px',
           margin: '0 auto',
-          textAlign: 'center',
-          borderRadius: '10px',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
+          textAlign: 'center'
         }}>
           {/* Success Icon */}
           <div style={{
             fontSize: '4.5rem',
             marginBottom: '1.5rem',
-            color: '#10b981'
+            color: 'var(--success)'
           }}>
             ✓
           </div>
@@ -88,7 +81,7 @@ Phone: 1800-GOV-HELP (1800-468-4357)
           <h2 style={{
             fontSize: '1.875rem',
             fontWeight: '700',
-            color: '#0b3d91',
+            color: 'var(--primary-blue-dark)',
             marginBottom: '1.5rem'
           }}>
             Application Submitted!
@@ -97,18 +90,18 @@ Phone: 1800-GOV-HELP (1800-468-4357)
           {/* Application ID Box */}
           <div className="alert alert-success" style={{
             background: '#f0fdf4',
-            borderLeft: '4px solid #10b981',
+            borderLeft: '4px solid var(--success)',
             marginBottom: '2rem',
             textAlign: 'center'
           }}>
             <div>
-              <p style={{ fontSize: '0.85rem', color: '#065f46', fontWeight: '600', marginBottom: '0.5rem' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: '600', marginBottom: '0.5rem' }}>
                 YOUR APPLICATION ID
               </p>
-              <p style={{
+                <p style={{
                 fontSize: '1.625rem',
                 fontWeight: '700',
-                color: '#10b981',
+                color: 'var(--success)',
                 fontFamily: 'monospace',
                 letterSpacing: '0.1em'
               }}>
@@ -121,13 +114,11 @@ Phone: 1800-GOV-HELP (1800-468-4357)
           </div>
 
           {/* Status Information */}
-          <div className="review-section" style={{
-            background: 'linear-gradient(135deg, #e8f0fd 0%, #f0f7ff 100%)',
-            borderLeft: '4px solid #1e60d4',
+            <div className="review-section accent-border-left" style={{
             marginBottom: '2rem',
             textAlign: 'left'
           }}>
-            <div className="review-section-title" style={{ fontSize: '1.1rem', color: '#0b3d91' }}>
+            <div className="review-section-title" style={{ fontSize: '1.1rem', color: 'var(--primary-blue-dark)' }}>
               <span>📋</span> What Happens Next?
             </div>
             <div style={{ display: 'grid', gap: '1rem' }}>
@@ -145,7 +136,7 @@ Phone: 1800-GOV-HELP (1800-468-4357)
                   borderBottom: '1px solid rgba(59, 130, 246, 0.2)'
                 }}>
                   <div style={{
-                    background: '#3b82f6',
+                    background: 'var(--primary-blue-main)',
                     color: 'white',
                     width: '32px',
                     height: '32px',
@@ -158,26 +149,26 @@ Phone: 1800-GOV-HELP (1800-468-4357)
                   }}>
                     {step.num}
                   </div>
-                  <p style={{ color: '#1e40af', fontWeight: '500' }}>{step.text}</p>
+                  <p style={{ color: 'var(--primary-blue-dark)', fontWeight: '500' }}>{step.text}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Tracking Information */}
-          <div className="alert alert-info" style={{
+            <div className="alert alert-info" style={{
             background: '#cffafe',
-            borderLeft: '4px solid #0891b2',
+            borderLeft: '4px solid var(--info)',
             marginBottom: '2rem',
             textAlign: 'left'
           }}>
             <div style={{ marginBottom: '0.75rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
               <span style={{ fontSize: '1.2rem' }}>🔍</span>
               <div>
-                <p style={{ fontWeight: '600', color: '#164e63', marginBottom: '0.5rem' }}>
+                <p style={{ fontWeight: '600', color: 'var(--info)', marginBottom: '0.5rem' }}>
                   Track Your Application Anytime
                 </p>
-                <p style={{ color: '#0e7490', fontSize: '0.9rem' }}>
+                <p style={{ color: 'var(--info)', fontSize: '0.9rem' }}>
                   Visit your dashboard and use your Application ID to check the status of your application at any time.
                 </p>
               </div>

@@ -32,44 +32,43 @@ export default function Login() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0b3d91 0%, #1e60d4 50%, #5b8ce8 100%)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1.5rem'
+    <div className="page-bg login-shell" style={{
+      background: 'radial-gradient(circle at 12% 15%, rgba(42,168,154,0.12) 0%, transparent 40%), radial-gradient(circle at 88% 85%, rgba(238,122,74,0.1) 0%, transparent 38%), var(--light-bg)'
     }}>
+      <aside className="login-sidebar" aria-label="Portal navbar">
+        <div className="login-sidebar-title">Welfare Portal</div>
+      </aside>
+
+      <div className="login-main">
       {/* Logo and Title */}
       <div style={{
         textAlign: 'center',
-        marginBottom: '3rem',
-        color: 'white'
+        marginBottom: '2.2rem',
+        color: 'var(--text-primary)'
       }}>
-        <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🏛️</div>
-        <h1 style={{ fontSize: '2.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>Welfare Portal</h1>
-        <p style={{ fontSize: '1rem', opacity: 0.95 }}>Government Benefits & Services</p>
+        <h1 style={{ fontSize: '3.4rem', fontWeight: 800, marginBottom: '0.7rem', color: 'var(--primary-blue-dark)', letterSpacing: '-0.03em', fontFamily: 'Poppins, Inter, sans-serif' }}>Welfare Portal</h1>
+        <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Government Benefits & Services</p>
       </div>
 
       {/* Login Card */}
       <div className="card" style={{ 
-        maxWidth: '450px', 
+        maxWidth: '520px', 
         width: '100%',
-        borderRadius: '10px',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)'
+        borderRadius: '16px',
+        boxShadow: '0 14px 34px rgba(10, 31, 28, 0.12)',
+        padding: '2rem'
       }}>
         {/* Header */}
         <div style={{ 
           textAlign: 'center', 
-          marginBottom: '2rem', 
-          paddingBottom: '1.5rem', 
-          borderBottom: '2px solid #e0e0e0'
+          marginBottom: '1.75rem', 
+          paddingBottom: '1.1rem', 
+          borderBottom: '1px solid rgba(15,107,95,0.12)'
         }}>
-          <h2 style={{ fontSize: '1.5rem', color: '#0b3d91', marginBottom: '0.5rem' }}>
+          <h2 style={{ fontSize: '1.75rem', color: 'var(--primary-blue-dark)', marginBottom: '0.5rem' }}>
             {step === 'mobile' ? 'Sign In' : 'Verify OTP'}
           </h2>
-          <p style={{ color: '#555555', fontSize: '0.95rem' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
             {step === 'mobile' 
               ? 'Enter your mobile number to get started' 
               : `OTP has been sent to +91 ${mobile}`}
@@ -95,24 +94,32 @@ export default function Login() {
         {step === 'mobile' ? (
           <div>
             <div className="form-group">
-              <label htmlFor="mobile" style={{ marginBottom: '0.75rem' }}>
+              <label htmlFor="mobile" style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>
                 Mobile Number
                 <span className="required">*</span>
               </label>
-              <input
-                id="mobile"
-                type="tel"
-                placeholder="Enter 10-digit mobile number"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                maxLength="10"
-                style={{
-                  fontSize: '1.1rem',
-                  padding: '0.875rem 1rem',
-                  borderRadius: '6px'
-                }}
-              />
-              <p style={{ fontSize: '0.85rem', color: '#666666', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'stretch' }}>
+                <div className="country-select" aria-label="Country code">
+                  <span>+91</span>
+                </div>
+                <input
+                  id="mobile"
+                  type="tel"
+                  placeholder="Enter 10-digit mobile number"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  maxLength="10"
+                  style={{
+                    flex: 1,
+                    fontSize: '1.1rem',
+                    height: '54px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(15,107,95,0.18)',
+                    padding: '0.75rem 1rem'
+                  }}
+                />
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
                 We'll send an OTP to verify your identity
               </p>
             </div>
@@ -120,25 +127,28 @@ export default function Login() {
             <button
               onClick={handleSendOTP}
               className="btn btn-primary"
-              style={{ width: '100%', marginTop: '1.5rem', padding: '0.875rem' }}
+              style={{ width: '100%', marginTop: '1.5rem', padding: '1rem', fontSize: '1.05rem' }}
             >
               Send OTP
             </button>
 
             <p style={{ 
               fontSize: '0.85rem', 
-              color: '#666666', 
+              color: 'var(--text-secondary)', 
               marginTop: '1.5rem', 
               textAlign: 'center',
               lineHeight: '1.6'
             }}>
-              By signing in, you agree to our Terms of Service and Privacy Policy
+              By signing in, you agree to our
+              <a href="#" style={{ color: 'var(--primary-blue-dark)', fontWeight: 600, marginLeft: '0.35rem' }}>Terms</a>
+              <span style={{ margin: '0 0.4rem', color: 'var(--gray-400)' }}>•</span>
+              <a href="#" style={{ color: 'var(--primary-blue-dark)', fontWeight: 600 }}>Privacy</a>
             </p>
           </div>
         ) : (
           <div>
             <div className="form-group">
-              <label htmlFor="otp" style={{ marginBottom: '0.75rem' }}>
+              <label htmlFor="otp" style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>
                 One-Time Password (OTP)
                 <span className="required">*</span>
               </label>
@@ -151,14 +161,15 @@ export default function Login() {
                 maxLength="4"
                 style={{
                   fontSize: '1.5rem',
-                  padding: '0.875rem 1rem',
-                  borderRadius: '6px',
+                  padding: '0.95rem 1rem',
+                  borderRadius: '10px',
                   textAlign: 'center',
                   letterSpacing: '0.25rem',
-                  fontWeight: 600
+                  fontWeight: 600,
+                  border: '1px solid rgba(15,107,95,0.18)'
                 }}
               />
-              <p style={{ fontSize: '0.85rem', color: '#666666', marginTop: '0.5rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
                 Enter the 4-digit code sent to your mobile
               </p>
             </div>
@@ -182,8 +193,8 @@ export default function Login() {
                 width: '100%', 
                 marginTop: '0.75rem', 
                 padding: '0.875rem',
-                borderColor: '#1e60d4',
-                color: '#1e60d4'
+                borderColor: 'var(--primary-blue-main)',
+                color: 'var(--primary-blue-main)'
               }}
             >
               ← Change Mobile Number
@@ -195,14 +206,15 @@ export default function Login() {
         <div style={{
           marginTop: '1.5rem',
           paddingTop: '1.5rem',
-          borderTop: '1px solid #e0e0e0',
+          borderTop: '1px solid rgba(15,107,95,0.12)',
           textAlign: 'center',
-          color: '#666666',
+          color: 'var(--text-secondary)',
           fontSize: '0.85rem'
         }}>
           <p>📞 Support: 1800-WELFARE</p>
           {step === 'mobile' && <p style={{ marginTop: '0.5rem' }}>🔐 Demo OTP: 1234</p>}
         </div>
+      </div>
       </div>
     </div>
   )

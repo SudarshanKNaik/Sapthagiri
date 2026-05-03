@@ -140,7 +140,7 @@ export default function SchemeDetail() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fb' }}>
+    <div className="page-bg">
       {/* Header Navigation */}
       <header className="header-nav">
         <div className="header-nav-container">
@@ -148,17 +148,10 @@ export default function SchemeDetail() {
         </div>
       </header>
 
-      {/* Scheme Hero */}
-      <section style={{
-        background: 'linear-gradient(135deg, #0b3d91 0%, #1e60d4 100%)',
-        color: 'white',
-        padding: '3rem 1.5rem',
-        textAlign: 'center',
-        borderBottom: '4px solid #e8f0fd'
-      }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{scheme.icon}</div>
-        <h1 style={{ fontSize: '2.25rem', fontWeight: '700', marginBottom: '0.75rem' }}>{scheme.name}</h1>
-        <p style={{ fontSize: '1.1rem', opacity: 0.95 }}>{scheme.description}</p>
+      <section className="page-hero">
+        <div className="hero-icon">{scheme.icon}</div>
+        <h1>{scheme.name}</h1>
+        <p>{scheme.description}</p>
       </section>
 
       {/* Content */}
@@ -173,11 +166,11 @@ export default function SchemeDetail() {
           {/* Main Content */}
           <div>
             {/* Benefits */}
-            <div className="card" style={{ marginBottom: '2rem', borderRadius: '10px' }}>
+            <div className="card" style={{ marginBottom: '2rem' }}>
               <div className="card-header" style={{ borderBottom: '2px solid #e0e0e0', marginBottom: '1.5rem' }}>
                 <span style={{ fontSize: '2rem' }}>🎁</span>
                 <div>
-                  <h2 style={{ fontSize: '1.375rem', color: '#0b3d91' }}>Key Benefits</h2>
+                  <h2 style={{ fontSize: '1.375rem', color: 'var(--primary-blue-dark)' }}>Key Benefits</h2>
                 </div>
               </div>
               <ul style={{ listStyle: 'none' }}>
@@ -188,7 +181,7 @@ export default function SchemeDetail() {
                     padding: '0.75rem 0',
                     borderBottom: idx < scheme.benefits.length - 1 ? '1px solid #e0e0e0' : 'none'
                   }}>
-                    <span style={{ color: '#10b981', marginRight: '0.75rem', fontWeight: '700', fontSize: '1.25rem' }}>✓</span>
+                    <span style={{ color: 'var(--success)', marginRight: '0.75rem', fontWeight: '700', fontSize: '1.25rem' }}>✓</span>
                     <span style={{ color: '#555555' }}>{benefit}</span>
                   </li>
                 ))}
@@ -200,7 +193,7 @@ export default function SchemeDetail() {
               <div className="card-header" style={{ borderBottom: '2px solid #e0e0e0', marginBottom: '1.5rem' }}>
                 <span style={{ fontSize: '2rem' }}>✓</span>
                 <div>
-                  <h2 style={{ fontSize: '1.375rem', color: '#0b3d91' }}>Eligibility Criteria</h2>
+                  <h2 style={{ fontSize: '1.375rem', color: 'var(--primary-blue-dark)' }}>Eligibility Criteria</h2>
                 </div>
               </div>
               <ul style={{ listStyle: 'none' }}>
@@ -211,7 +204,7 @@ export default function SchemeDetail() {
                     padding: '0.75rem 0',
                     borderBottom: idx < scheme.eligibility.length - 1 ? '1px solid #e0e0e0' : 'none'
                   }}>
-                    <span style={{ color: '#1e60d4', marginRight: '0.75rem', fontWeight: '700', fontSize: '1.25rem' }}>•</span>
+                    <span style={{ color: 'var(--primary-blue-main)', marginRight: '0.75rem', fontWeight: '700', fontSize: '1.25rem' }}>•</span>
                     <span style={{ color: '#555555' }}>{criteria}</span>
                   </li>
                 ))}
@@ -223,7 +216,7 @@ export default function SchemeDetail() {
               <div className="card-header" style={{ borderBottom: '2px solid #e0e0e0', marginBottom: '1.5rem' }}>
                 <span style={{ fontSize: '2rem' }}>📄</span>
                 <div>
-                  <h2 style={{ fontSize: '1.375rem', color: '#0b3d91' }}>Required Documents</h2>
+                  <h2 style={{ fontSize: '1.375rem', color: 'var(--primary-blue-dark)' }}>Required Documents</h2>
                 </div>
               </div>
               <ul style={{ listStyle: 'none' }}>
@@ -244,8 +237,8 @@ export default function SchemeDetail() {
 
           {/* Sidebar */}
           <div style={{ height: 'fit-content', position: 'sticky', top: '2rem' }}>
-            <div className="card" style={{ borderRadius: '10px', background: 'linear-gradient(135deg, #e8f0fd 0%, #f0f7ff 100%)', borderLeft: '4px solid #1e60d4' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0b3d91', marginBottom: '1rem' }}>Ready to Apply?</h3>
+            <div className="card accent-border-left" style={{ borderRadius: '12px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary-blue-dark)', marginBottom: '1rem' }}>Ready to Apply?</h3>
               <p style={{ color: '#555555', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
                 Fill out the application form to apply for this scheme. You can use your existing data for faster completion.
               </p>
@@ -254,7 +247,7 @@ export default function SchemeDetail() {
                   ➤ Proceed to Apply
                 </button>
               </Link>
-              <p style={{ fontSize: '0.8rem', color: '#0b3d91', marginTop: '1rem', textAlign: 'center', fontWeight: '500' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--primary-blue-dark)', marginTop: '1rem', textAlign: 'center', fontWeight: '500' }}>
                 📅 Processing time: 7-10 working days
               </p>
             </div>

@@ -37,7 +37,7 @@ export default function Review() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fb' }}>
+    <div className="page-bg">
       {/* Header Navigation */}
       <header className="header-nav">
         <div className="header-nav-container">
@@ -45,15 +45,10 @@ export default function Review() {
         </div>
       </header>
 
-      {/* Page Hero */}
-      <section style={{
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-        color: 'white',
-        padding: '2.5rem 1.5rem',
-        textAlign: 'center'
-      }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅ Review Your Application</h1>
-        <p style={{ opacity: 0.95, fontSize: '1rem' }}>Please verify all details before final submission</p>
+      <section className="page-hero">
+        <div className="hero-icon">✅</div>
+        <h1>Review Your Application</h1>
+        <p>Please verify all details before final submission</p>
       </section>
 
       {/* Content */}
@@ -68,11 +63,11 @@ export default function Review() {
           {/* Main Review Content */}
           <div>
             {/* Scheme Info */}
-            <div className="review-section" style={{ background: 'linear-gradient(135deg, #e8f0fd 0%, #f0f7ff 100%)', borderLeft: '4px solid #1e60d4' }}>
-              <div className="review-section-title" style={{ fontSize: '1.1rem', color: '#0b3d91' }}>
+            <div className="review-section accent-border-left">
+              <div className="review-section-title" style={{ fontSize: '1.1rem', color: 'var(--primary-blue-dark)' }}>
                 <span>🎯</span> Selected Scheme
               </div>
-              <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1e60d4' }}>{scheme}</p>
+              <p style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--primary-blue-main)' }}>{scheme}</p>
             </div>
 
             {/* Personal Details */}
@@ -181,7 +176,7 @@ export default function Review() {
             <button
               onClick={() => router.back()}
               className="btn-outline"
-              style={{ width: '100%', marginTop: '0.75rem', borderColor: '#3b82f6', color: '#3b82f6' }}
+              style={{ width: '100%', marginTop: '0.75rem', borderColor: 'var(--primary-blue-main)', color: 'var(--primary-blue-main)' }}
             >
               ← Go Back
             </button>

@@ -147,7 +147,7 @@ export default function Apply() {
     const step = formFields[stepKey]
 
     return (
-      <div className="card" style={{ borderRadius: '10px', borderLeft: '4px solid #1e60d4', marginBottom: '2rem' }}>
+      <div className="card accent-border-left" style={{ marginBottom: '2rem' }}>
         <div className="card-header" style={{ borderBottom: '2px solid #e0e0e0', marginBottom: '1.75rem' }}>
           <span style={{ fontSize: '2rem' }}>
             {currentStep === 1 && '👤'}
@@ -155,8 +155,8 @@ export default function Apply() {
             {currentStep === 3 && '💰'}
           </span>
           <div>
-            <h2 style={{ fontSize: '1.5rem', color: '#0b3d91', marginBottom: '0.25rem' }}>{step.title}</h2>
-            <p style={{ color: '#555555', fontSize: '0.9rem' }}>Step {currentStep} of 4</p>
+            <h2 style={{ fontSize: '1.5rem', color: 'var(--primary-blue-dark)', marginBottom: '0.25rem' }}>{step.title}</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Step {currentStep} of 4</p>
           </div>
         </div>
         <div className="form-row">
@@ -250,7 +250,7 @@ export default function Apply() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fb' }}>
+    <div className="page-bg">
       {/* Header Navigation */}
       <header className="header-nav">
         <div className="header-nav-container">
@@ -261,15 +261,10 @@ export default function Apply() {
       </header>
 
       {/* Page Hero */}
-      <section style={{
-        background: 'linear-gradient(135deg, #0b3d91 0%, #1e60d4 100%)',
-        color: 'white',
-        padding: '2.5rem 1.5rem',
-        textAlign: 'center',
-        borderBottom: '4px solid #e8f0fd'
-      }}>
-        <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📝 Welfare Scheme Application</h1>
-        <p style={{ opacity: 0.95, fontSize: '1rem' }}>Complete your application in 3 easy steps</p>
+      <section className="page-hero">
+        <div className="hero-icon">📝</div>
+        <h1>Welfare Scheme Application</h1>
+        <p>Complete your application in 3 easy steps</p>
       </section>
 
       {/* Main Content */}
@@ -338,14 +333,9 @@ export default function Apply() {
       </main>
 
       {/* Info Footer */}
-      <section style={{
-        background: 'linear-gradient(135deg, #e8f0fd 0%, #f0f7ff 100%)',
-        padding: '2rem 1.5rem',
-        textAlign: 'center',
-        borderTop: '2px solid #e0e0e0'
-      }}>
-        <p style={{ color: '#0b3d91', marginBottom: '0.5rem' }}>💾 Your data is automatically saved at each step</p>
-        <p style={{ color: '#555555', fontSize: '0.9rem' }}>Need help? Contact support at 1-800-WELFARE</p>
+      <section className="page-footer">
+        <p style={{ color: 'var(--primary-blue-dark)', marginBottom: '0.5rem' }}>💾 Your data is automatically saved at each step</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Need help? Contact support at 1-800-WELFARE</p>
       </section>
     </div>
   )
